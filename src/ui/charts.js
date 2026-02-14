@@ -11,11 +11,14 @@ export function drawChart(canvas, xVals, yVals, cfg) {
 
   const w = cssW;
   const h = cssH;
-  ctx.clearRect(0, 0, w, h);
+
+  // Dark background fill
+  ctx.fillStyle = "#0c1117";
+  ctx.fillRect(0, 0, w, h);
 
   if (!Array.isArray(xVals) || !Array.isArray(yVals) || xVals.length === 0 || yVals.length === 0) {
-    ctx.fillStyle = "#6d7a86";
-    ctx.font = "13px Menlo, Consolas, monospace";
+    ctx.fillStyle = "#4a5a68";
+    ctx.font = "13px 'JetBrains Mono', Menlo, Consolas, monospace";
     ctx.fillText("No data", 14, 24);
     return;
   }
@@ -67,39 +70,48 @@ export function drawChart(canvas, xVals, yVals, cfg) {
 
   const yToPx = (y) => padT + ((yMax - y) / (yMax - yMin)) * plotH;
 
-  ctx.strokeStyle = "#deceb7";
+  // Plot area border
+  ctx.strokeStyle = "#243040";
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.rect(padL, padT, plotW, plotH);
   ctx.stroke();
 
-  ctx.font = "11px Menlo, Consolas, monospace";
-  ctx.fillStyle = "#5f7280";
+  // Axis labels and grid
+  ctx.font = "11px 'JetBrains Mono', Menlo, Consolas, monospace";
+  ctx.fillStyle = "#4a5a68";
 
+  // Y-axis gridlines and labels
   const yTicks = 5;
   for (let i = 0; i <= yTicks; i++) {
     const y = yMin + (i / yTicks) * (yMax - yMin);
     const py = yToPx(y);
-    ctx.strokeStyle = "#efe2cf";
+    ctx.strokeStyle = "#1a2430";
     ctx.beginPath();
     ctx.moveTo(padL, py);
     ctx.lineTo(padL + plotW, py);
     ctx.stroke();
+    ctx.fillStyle = "#4a5a68";
     ctx.fillText(shortFloat(y), 4, py + 4);
   }
 
+  // X-axis gridlines and labels
   const xTicks = cfg.xLog ? buildLogTicks(xMin, xMax) : buildLinearTicks(xMin, xMax, 6);
   for (const x of xTicks) {
     const px = xToPx(x);
-    ctx.strokeStyle = "#f1e6d6";
+    ctx.strokeStyle = "#1a2430";
     ctx.beginPath();
     ctx.moveTo(px, padT);
     ctx.lineTo(px, padT + plotH);
     ctx.stroke();
-    ctx.fillStyle = "#5f7280";
+    ctx.fillStyle = "#4a5a68";
     ctx.fillText(cfg.xLog ? shortHz(x) : shortFloat(x), px - 16, padT + plotH + 16);
   }
 
+  // Primary trace with glow effect
+  ctx.save();
+  ctx.shadowColor = cfg.lineColor;
+  ctx.shadowBlur = 6;
   ctx.strokeStyle = cfg.lineColor;
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -118,9 +130,15 @@ export function drawChart(canvas, xVals, yVals, cfg) {
     }
   }
   ctx.stroke();
+  ctx.restore();
 
+  // Secondary trace with glow effect
   if (Array.isArray(cfg.secondaryY)) {
-    ctx.strokeStyle = cfg.secondaryColor || "#cc6f4d";
+    ctx.save();
+    const secColor = cfg.secondaryColor || "#ffb347";
+    ctx.shadowColor = secColor;
+    ctx.shadowBlur = 6;
+    ctx.strokeStyle = secColor;
     ctx.lineWidth = 2;
     ctx.beginPath();
     moved = false;
@@ -138,10 +156,12 @@ export function drawChart(canvas, xVals, yVals, cfg) {
       }
     }
     ctx.stroke();
+    ctx.restore();
   }
 
-  ctx.fillStyle = "#34495b";
-  ctx.font = "12px Menlo, Consolas, monospace";
+  // Axis titles
+  ctx.fillStyle = "#5a6e7e";
+  ctx.font = "11px 'DM Sans', system-ui, sans-serif";
   ctx.fillText(cfg.titleX, padL + plotW / 2 - 44, h - 8);
 
   ctx.save();
@@ -150,20 +170,22 @@ export function drawChart(canvas, xVals, yVals, cfg) {
   ctx.fillText(cfg.titleY, 0, 0);
   ctx.restore();
 
+  // Legend
   if (cfg.lineLabel || cfg.secondaryLabel) {
     const legendY = padT + 12;
     let legendX = padL + plotW - 130;
     if (cfg.lineLabel) {
       ctx.fillStyle = cfg.lineColor;
       ctx.fillRect(legendX, legendY - 8, 10, 3);
-      ctx.fillStyle = "#445b68";
+      ctx.fillStyle = "#6b7f8e";
+      ctx.font = "11px 'JetBrains Mono', Menlo, Consolas, monospace";
       ctx.fillText(cfg.lineLabel, legendX + 14, legendY);
       legendX += 56;
     }
     if (cfg.secondaryLabel) {
-      ctx.fillStyle = cfg.secondaryColor || "#cc6f4d";
+      ctx.fillStyle = cfg.secondaryColor || "#ffb347";
       ctx.fillRect(legendX, legendY - 8, 10, 3);
-      ctx.fillStyle = "#445b68";
+      ctx.fillStyle = "#6b7f8e";
       ctx.fillText(cfg.secondaryLabel, legendX + 14, legendY);
     }
   }

@@ -121,21 +121,21 @@ function run() {
   drawChart(canvases.freq, freqData.x, freqData.y, {
     titleX: "Frequency (Hz)",
     titleY: "Vout (V)",
-    lineColor: "#1f6f8b",
+    lineColor: "#00e68a",
     xLog: true,
   });
 
   drawChart(canvases.pos, posData.x, posData.y, {
     titleX: "Position fraction",
     titleY: "Vout (V)",
-    lineColor: "#e07a5f",
+    lineColor: "#ffb347",
     xLog: false,
   });
 
   drawChart(canvases.gap, gapData.x, gapData.y, {
     titleX: "Total separation G (mm)",
     titleY: "Vout (V)",
-    lineColor: "#2a7f62",
+    lineColor: "#5cc9f5",
     xLog: false,
   });
 
@@ -143,11 +143,11 @@ function run() {
   drawChart(canvases.solverTrace, solverTraceData.x, solverTraceData.v3, {
     titleX: "Iteration",
     titleY: "Voltage (V)",
-    lineColor: "#6c5ce7",
+    lineColor: "#a78bfa",
     xLog: false,
     lineLabel: "V3",
     secondaryY: solverTraceData.vOut,
-    secondaryColor: "#f39c12",
+    secondaryColor: "#ffb347",
     secondaryLabel: "Vout",
   });
 
@@ -156,7 +156,7 @@ function run() {
   drawChart(canvases.solverResidual, residualData.x, residualData.y, {
     titleX: "Iteration",
     titleY: residualData.yLabel,
-    lineColor: "#2d98da",
+    lineColor: "#5cc9f5",
     xLog: false,
     lineLabel: residualData.lineLabel,
   });

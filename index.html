@@ -4,107 +4,126 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LTC1043 Capacitive Front-End Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/styles.css" />
 </head>
 <body>
   <main class="wrap">
-    <section class="hero">
-      <h1>LTC1043 Capacitive Sensor Front-End Simulator</h1>
-      <p>
-        Physics-based simulation for the capacitive displacement front-end from the FBV documentation.
-        This models only the sensor + switched-cap stage (Ca/Cb/Cc, R10/R11, C3/C4, switching frequency).
-      </p>
-    </section>
+    <header class="hero">
+      <div class="hero-badge">SIM</div>
+      <div class="hero-content">
+        <h1>LTC1043 <span class="hero-thin">Capacitive Sensor Front-End</span> Simulator</h1>
+        <p>
+          Physics-based simulation for the capacitive displacement front-end from the FBV documentation.
+          Models the sensor + switched-cap stage&thinsp;—&thinsp;Ca/Cb/Cc, R10/R11, C3/C4, switching frequency.
+        </p>
+      </div>
+    </header>
 
     <section class="layout">
-      <aside class="panel" aria-label="Inputs panel">
-        <h2>Inputs</h2>
+      <aside class="panel sidebar" aria-label="Inputs panel">
+        <h2><span class="panel-icon">&#9881;</span> Parameters</h2>
 
-        <div class="field-grid">
-          <div class="field">
-            <label for="widthCm">Plate width (cm)</label>
-            <input id="widthCm" type="number" step="any" min="0.001" />
-          </div>
+        <fieldset class="input-group">
+          <legend>Sensor Geometry</legend>
+          <div class="field-grid">
+            <div class="field">
+              <label for="widthCm">Plate width <span class="unit">(cm)</span></label>
+              <input id="widthCm" type="number" step="any" min="0.001" />
+            </div>
 
-          <div class="field">
-            <label for="heightCm">Plate height (cm)</label>
-            <input id="heightCm" type="number" step="any" min="0.001" />
-          </div>
+            <div class="field">
+              <label for="heightCm">Plate height <span class="unit">(cm)</span></label>
+              <input id="heightCm" type="number" step="any" min="0.001" />
+            </div>
 
-          <div class="field wide">
-            <label for="plateAreaInfo">Computed plate area (cm²)</label>
-            <input id="plateAreaInfo" type="text" readonly />
-          </div>
+            <div class="field wide">
+              <label for="plateAreaInfo">Computed plate area <span class="unit">(cm²)</span></label>
+              <input id="plateAreaInfo" type="text" readonly />
+            </div>
 
-          <div class="field">
-            <label for="totalGapMm">Total outer-plate separation G (mm)</label>
-            <input id="totalGapMm" type="number" step="any" min="0.0001" />
-          </div>
+            <div class="field">
+              <label for="totalGapMm">Total gap G <span class="unit">(mm)</span></label>
+              <input id="totalGapMm" type="number" step="any" min="0.0001" />
+            </div>
 
-          <div class="field">
-            <label for="minGapMm">Minimum gap clamp (mm)</label>
-            <input id="minGapMm" type="number" step="any" min="0.00001" />
-          </div>
-
-          <div class="field wide">
-            <label for="position">Position fraction p (0 left, 1 right)</label>
-            <div class="range-row">
-              <input id="position" type="range" min="0" max="1" step="any" />
-              <input id="positionText" type="text" readonly />
+            <div class="field">
+              <label for="minGapMm">Min gap clamp <span class="unit">(mm)</span></label>
+              <input id="minGapMm" type="number" step="any" min="0.00001" />
             </div>
           </div>
+        </fieldset>
 
-          <div class="field wide">
-            <label for="positionOffsetMm">Offset from center (mm, +right / -left)</label>
-            <input id="positionOffsetMm" type="number" step="0.1" />
-          </div>
+        <fieldset class="input-group">
+          <legend>Position</legend>
+          <div class="field-grid">
+            <div class="field wide">
+              <label for="position">Position fraction p <span class="unit">(0 left, 1 right)</span></label>
+              <div class="range-row">
+                <input id="position" type="range" min="0" max="1" step="any" />
+                <input id="positionText" type="text" readonly class="range-readout" />
+              </div>
+            </div>
 
-          <div class="field wide">
-            <label for="freqHz">Switching frequency (Hz)</label>
-            <input id="freqHz" type="number" step="any" min="1" />
+            <div class="field wide">
+              <label for="positionOffsetMm">Offset from center <span class="unit">(mm, +right / −left)</span></label>
+              <input id="positionOffsetMm" type="number" step="0.1" />
+            </div>
           </div>
-        </div>
+        </fieldset>
+
+        <fieldset class="input-group">
+          <legend>Switching</legend>
+          <div class="field-grid">
+            <div class="field wide">
+              <label for="freqHz">Switching frequency <span class="unit">(Hz)</span></label>
+              <input id="freqHz" type="number" step="any" min="1" />
+            </div>
+          </div>
+        </fieldset>
 
         <details open>
           <summary>Advanced Components</summary>
           <div class="field-grid" style="margin-top: 0.45rem;">
             <div class="field">
-              <label for="vDrivePeakV">Drive amplitude Vpeak (V)</label>
+              <label for="vDrivePeakV">Drive Vpeak <span class="unit">(V)</span></label>
               <input id="vDrivePeakV" type="number" step="any" min="0.01" />
             </div>
 
             <div class="field">
-              <label for="epsilonR">Dielectric εr (air fixed)</label>
+              <label for="epsilonR">Dielectric εr <span class="unit">(air)</span></label>
               <input id="epsilonR" type="number" readonly />
             </div>
 
             <div class="field">
-              <label for="r10Ohm">R10 (Ω)</label>
+              <label for="r10Ohm">R10 <span class="unit">(Ω)</span></label>
               <input id="r10Ohm" type="number" step="any" min="1" />
             </div>
 
             <div class="field">
-              <label for="r11Ohm">R11 (Ω)</label>
+              <label for="r11Ohm">R11 <span class="unit">(Ω)</span></label>
               <input id="r11Ohm" type="number" step="any" min="1" />
             </div>
 
             <div class="field">
-              <label for="rEqOhm">R_eq (Ω, output load)</label>
+              <label for="rEqOhm">R_eq <span class="unit">(Ω)</span></label>
               <input id="rEqOhm" type="number" step="any" min="1" />
             </div>
 
             <div class="field">
-              <label for="c3F">C3 (pF)</label>
+              <label for="c3F">C3 <span class="unit">(pF)</span></label>
               <input id="c3F" type="number" step="any" min="0.001" />
             </div>
 
             <div class="field">
-              <label for="c4F">C4 (pF)</label>
+              <label for="c4F">C4 <span class="unit">(pF)</span></label>
               <input id="c4F" type="number" step="any" min="0.001" />
             </div>
 
             <div class="field wide">
-              <label for="ccF">Cc stray (pF)</label>
+              <label for="ccF">Cc stray <span class="unit">(pF)</span></label>
               <input id="ccF" type="number" step="any" min="0" />
             </div>
           </div>
@@ -114,11 +133,11 @@
           <summary>Sweep Controls</summary>
           <div class="field-grid" style="margin-top: 0.45rem;">
             <div class="field">
-              <label for="freqMinHz">Freq min (Hz)</label>
+              <label for="freqMinHz">Freq min <span class="unit">(Hz)</span></label>
               <input id="freqMinHz" type="number" step="any" min="1" />
             </div>
             <div class="field">
-              <label for="freqMaxHz">Freq max (Hz)</label>
+              <label for="freqMaxHz">Freq max <span class="unit">(Hz)</span></label>
               <input id="freqMaxHz" type="number" step="any" min="1" />
             </div>
             <div class="field">
@@ -127,11 +146,11 @@
             </div>
 
             <div class="field">
-              <label for="gapMinMm">Gap min (mm)</label>
+              <label for="gapMinMm">Gap min <span class="unit">(mm)</span></label>
               <input id="gapMinMm" type="number" step="any" min="0.0001" />
             </div>
             <div class="field">
-              <label for="gapMaxMm">Gap max (mm)</label>
+              <label for="gapMaxMm">Gap max <span class="unit">(mm)</span></label>
               <input id="gapMaxMm" type="number" step="any" min="0.0001" />
             </div>
             <div class="field">
@@ -149,26 +168,26 @@
 
       <section style="display:grid; gap: 1rem;">
         <section class="panel" aria-label="Metrics panel">
-          <h2>Simulation Metrics</h2>
+          <h2><span class="panel-icon">&#9632;</span> Simulation Metrics</h2>
           <div class="metrics-grid" id="metrics"></div>
           <div id="warnings"></div>
 
           <div class="validation">
-            <h2 style="margin-top:0;">Validation (Reference-Only)</h2>
+            <h3>Validation <span class="validation-tag">Reference</span></h3>
             <div class="row head">
               <div>Metric</div>
               <div>Computed</div>
               <div>Reference / Deviation</div>
             </div>
             <div id="validationRows"></div>
-            <p style="margin:0.45rem 0 0; font-size:0.8rem; color:#5f6d7a;">
+            <p class="validation-note">
               Reference values from the PDF are displayed only for comparison and are not used in core equations.
             </p>
           </div>
         </section>
 
         <section class="panel charts" aria-label="Charts panel">
-          <h2>Charts</h2>
+          <h2><span class="panel-icon">&#9473;</span> Charts</h2>
 
           <article class="chart-card">
             <div class="chart-head">
@@ -218,7 +237,7 @@
         </section>
 
         <section class="panel docs" aria-label="Documentation panel">
-          <h2>Model Notes</h2>
+          <h2><span class="panel-icon">&#9776;</span> Model Notes</h2>
           <p>
             Capacitances are computed with ideal parallel-plate physics:
             <code>C = ε0·εr·A/d</code> where <code>A = width·height</code> and
