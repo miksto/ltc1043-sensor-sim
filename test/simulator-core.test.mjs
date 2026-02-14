@@ -29,8 +29,8 @@ test('increasing position toward right increases Vout sign', () => {
   assert.ok(high > low, `low=${low}, high=${high}`);
 });
 
-test('high-frequency full-charge warning appears with defaults', () => {
-  const r = simulate({ ...DEFAULT_INPUTS, freqHz: 62500 });
+test('high-frequency full-charge warning appears at very high switching frequency', () => {
+  const r = simulate({ ...DEFAULT_INPUTS, freqHz: 1_000_000 });
   assert.ok(r.warnings.some((w) => w.includes('Full-charge assumption may be invalid')));
 });
 

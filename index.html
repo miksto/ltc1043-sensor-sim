@@ -151,10 +151,30 @@
       font-weight: 600;
     }
 
+    .metrics-sections {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .metric-section {
+      border: 1px solid #d7ccbc;
+      border-radius: 12px;
+      background: #fffefb;
+      padding: 0.55rem;
+    }
+
+    .metric-section h3 {
+      margin: 0 0 0.5rem;
+      font-size: 0.86rem;
+      color: #304755;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
     .metrics-grid {
       display: grid;
       gap: 0.6rem;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     }
 
     .metric {
@@ -175,6 +195,14 @@
       font-weight: 700;
       color: #133746;
       word-break: break-word;
+    }
+
+    .metric .v.good {
+      color: #1f6f3d;
+    }
+
+    .metric .v.bad {
+      color: #9c2f2f;
     }
 
     .warn {
@@ -809,33 +837,61 @@
       }
 
       function renderMetrics(inputs, res) {
-        const items = [
-          ["Ca", fmtCap(res.caF)],
-          ["Cb", fmtCap(res.cbF)],
-          ["ΔC = Ca-Cb", fmtCap(res.deltaCF)],
-          ["Q_packet (open-loop)", fmtCharge(res.qPacketC)],
-          ["Q_transfer/cycle (signed)", fmtCharge(res.qToC4C)],
-          ["Vout steady", fmtVolt(res.vOutSteadyV)],
-          ["Output pole f", fmtHz(res.fPoleHz)],
-          ["τ_out", fmtSec(res.tauOutS)],
-          ["τA = R10·(Ca+Cc)", fmtSec(res.tauAS)],
-          ["τB = R11·(Cb+Cc)", fmtSec(res.tauBS)],
-          ["f_max for full-charge (5τ rule)", fmtHz(res.fWarningThresholdHz)],
-          ["R_eq (used)", fmtOhm(res.rEqOhm)],
-          ["Left gap dL", `${(res.dLeftM * 1e3).toFixed(4)} mm`],
-          ["Right gap dR", `${(res.dRightM * 1e3).toFixed(4)} mm`],
-          ["V3 steady (internal)", fmtVolt(res.v3SteadyV)],
-          ["Solver iterations", String(res.solverIterations)],
-          ["Solver residual", fmtVolt(res.solverResidualV)],
-          ["Solver converged", res.solverConverged ? "yes" : "no"],
-          ["α", res.alpha.toFixed(6)],
+        const sections = [
+          {
+            title: "Sensor Geometry",
+            items: [
+              ["Left gap dL", `${(res.dLeftM * 1e3).toFixed(4)} mm`],
+              ["Right gap dR", `${(res.dRightM * 1e3).toFixed(4)} mm`],
+              ["Ca", fmtCap(res.caF)],
+              ["Cb", fmtCap(res.cbF)],
+              ["ΔC = Ca-Cb", fmtCap(res.deltaCF)],
+            ],
+          },
+          {
+            title: "Charge Transfer",
+            items: [
+              ["Q_packet (open-loop)", fmtCharge(res.qPacketC)],
+              ["Q_transfer/cycle (signed)", fmtCharge(res.qToC4C)],
+              ["V3 steady (internal)", fmtVolt(res.v3SteadyV)],
+              ["α", res.alpha.toFixed(6)],
+            ],
+          },
+          {
+            title: "Output And Timing",
+            items: [
+              ["Vout steady", fmtVolt(res.vOutSteadyV)],
+              ["Output pole f", fmtHz(res.fPoleHz)],
+              ["τ_out", fmtSec(res.tauOutS)],
+              ["τA = R10·(Ca+Cc)", fmtSec(res.tauAS)],
+              ["τB = R11·(Cb+Cc)", fmtSec(res.tauBS)],
+              ["f_max for full-charge (5τ rule)", fmtHz(res.fWarningThresholdHz)],
+              ["R_eq (used)", fmtOhm(res.rEqOhm)],
+            ],
+          },
+          {
+            title: "Solver Diagnostics",
+            items: [
+              ["Solver iterations", String(res.solverIterations)],
+              ["Solver residual", fmtVolt(res.solverResidualV)],
+              ["Solver converged", res.solverConverged ? "yes" : "no", res.solverConverged ? "good" : "bad"],
+            ],
+          },
         ];
 
-        metricsEl.innerHTML = items.map(([k, v]) => `
-          <div class="metric">
-            <div class="k">${escapeHtml(k)}</div>
-            <div class="v">${escapeHtml(v)}</div>
-          </div>`).join("");
+        metricsEl.innerHTML = `<div class="metrics-sections">${
+          sections.map((section) => `
+            <section class="metric-section">
+              <h3>${escapeHtml(section.title)}</h3>
+              <div class="metrics-grid">
+                ${section.items.map((item) => `
+                  <div class="metric">
+                    <div class="k">${escapeHtml(item[0])}</div>
+                    <div class="v ${item[2] || ""}">${escapeHtml(item[1])}</div>
+                  </div>`).join("")}
+              </div>
+            </section>`).join("")
+        }</div>`;
 
         if (res.warnings.length > 0) {
           warningsEl.innerHTML = `<div class="warn">${escapeHtml(res.warnings.join(" "))}</div>`;
