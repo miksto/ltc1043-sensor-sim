@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LTC1043 Capacitive Front-End Simulator</title>
+  <title>Yuma Seismometer Capacitive Displacement Sensor Simulator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -12,13 +12,21 @@
 <body>
   <main class="wrap">
     <header class="hero">
-      <div class="hero-badge">SIM</div>
+      <div class="hero-badge">LTC1043</div>
       <div class="hero-content">
-        <h1>LTC1043 <span class="hero-thin">Capacitive Sensor Front-End</span> Simulator</h1>
-        <p>
-          Physics-based simulation for the capacitive displacement front-end from the FBV documentation.
-          Models the sensor + switched-cap stage&thinsp;—&thinsp;Ca/Cb/Cc, R10/R11, C3/C4, switching frequency.
+        <h1>Yuma Seismometer Capacitive Displacement Sensor Simulator</h1>
+        <p class="hero-summary">
+          This simulator models the capacitive displacement sensor front-end used in the Yuma seismometer circuit.
+          Change the plate geometry and timing settings to see how the output voltage responds.
         </p>
+        <div class="hero-links" role="note" aria-label="Circuit source references">
+          <a class="hero-link" href="https://www.groundmotion.org/main.html" target="_blank" rel="noopener noreferrer">
+            Source Page: groundmotion.org
+          </a>
+          <a class="hero-link" href="https://www.groundmotion.org/Yuma2.pdf" target="_blank" rel="noopener noreferrer">
+            Board Circuit: Yuma2.pdf
+          </a>
+        </div>
       </div>
     </header>
 
@@ -108,7 +116,7 @@
             </div>
 
             <div class="field">
-              <label for="rEqOhm">R_eq <span class="unit">(Ω)</span></label>
+              <label for="rEqOhm">R_out_load <span class="unit">(Ω)</span></label>
               <input id="rEqOhm" type="number" step="any" min="1" />
             </div>
 
@@ -239,6 +247,10 @@
         <section class="panel docs" aria-label="Documentation panel">
           <h2><span class="panel-icon">&#9776;</span> Model Notes</h2>
           <p>
+            This page follows the same front-end topology as the Ground Motion Yuma2 circuit linked below.
+            It is not a calibrated electrical replica of the full board.
+          </p>
+          <p>
             Capacitances are computed with ideal parallel-plate physics:
             <code>C = ε0·εr·A/d</code> where <code>A = width·height</code> and
             <code>dLeft = max(minGap, p·G)</code>, <code>dRight = max(minGap, (1-p)·G)</code>.
@@ -247,13 +259,24 @@
             Bidirectional switched-cap model:
             <code>Q_packet = 2·Vpeak·(Ca-Cb)</code>,
             then each cycle applies sensor injection on <code>C3</code>, bidirectional charge sharing between
-            <code>C3</code> and <code>C4</code>, and output leakage via <code>R_eq</code>.
+            <code>C3</code> and <code>C4</code>, and output leakage via <code>R_out_load</code>.
             Periodic steady-state is solved iteratively from <code>x[n+1]=F(x[n])</code>.
             Polarity is mapped so rightward motion is positive.
           </p>
           <p>
             Simplifications: front-end only (no U1A/integrator/coil loop), no fringing, no plate-thickness effects,
-            and full-charge assumption kept with warning when half-cycle is below <code>5·max(τA, τB)</code>.
+            full-charge assumption kept with warning when half-cycle is below <code>5·max(τA, τB)</code>, and
+            an output clamp (±12V in this model) to avoid non-physical runaway values.
+          </p>
+          <p>
+            Circuit source references:
+            <a href="https://www.groundmotion.org/main.html" target="_blank" rel="noopener noreferrer">groundmotion.org/main.html</a>,
+            <a href="https://www.groundmotion.org/Yuma2.pdf" target="_blank" rel="noopener noreferrer">groundmotion.org/Yuma2.pdf</a>.
+          </p>
+          <p>
+            This simulator was built with AI assistance using Codex and Claude and may contain inaccuracies.
+            It was created primarily as a learning tool to improve understanding of the working principles
+            of this type of capacitive sensor front-end.
           </p>
         </section>
       </section>

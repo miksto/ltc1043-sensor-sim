@@ -39,7 +39,7 @@ export function renderMetrics(metricsEl, warningsEl, res) {
         ["τA = R10·(Ca+Cc)", fmtSec(res.tauAS)],
         ["τB = R11·(Cb+Cc)", fmtSec(res.tauBS)],
         ["f_max for full-charge (5τ rule)", fmtHz(res.fWarningThresholdHz)],
-        ["R_eq (used)", fmtOhm(res.rEqOhm)],
+        ["R_out_load (used)", fmtOhm(res.rEqOhm)],
       ],
     },
     {

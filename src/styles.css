@@ -61,9 +61,9 @@ body::before {
 /* ─── Hero ─── */
 .hero {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
-  padding: 1rem 1.4rem;
+  padding: 1.1rem 1.35rem 1.05rem;
   background: linear-gradient(135deg, var(--bg-panel), var(--bg-raised));
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -72,41 +72,83 @@ body::before {
 
 .hero-badge {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
+  min-width: 82px;
+  height: 32px;
+  margin-top: 0.08rem;
   display: grid;
   place-items: center;
   background: linear-gradient(135deg, var(--accent), #00b86e);
   color: #0c1117;
   font-family: "JetBrains Mono", monospace;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   letter-spacing: 0.08em;
-  border-radius: 10px;
-  box-shadow: 0 0 20px rgba(0, 230, 138, 0.25);
+  border-radius: 999px;
+  box-shadow: 0 0 12px rgba(0, 230, 138, 0.22);
 }
 
 .hero-content { flex: 1; }
 
 .hero h1 {
-  margin: 0;
-  font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+  margin: 0.12rem 0 0;
+  font-size: clamp(1.2rem, 2.35vw, 1.82rem);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: #e8f0f4;
 }
 
-.hero-thin {
-  font-weight: 300;
-  color: var(--ink);
+.hero-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
-.hero p {
-  margin: 0.35rem 0 0;
+.hero-summary {
+  margin: 0.4rem 0 0;
   font-size: 0.88rem;
   color: var(--ink-dim);
   max-width: 80ch;
-  line-height: 1.5;
+  line-height: 1.47;
+}
+
+.hero-links {
+  margin-top: 0.62rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hero-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.52rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid var(--border-hi);
+  border-radius: 999px;
+  background: rgba(92, 201, 245, 0.08);
+  color: #8ddaff;
+}
+
+.hero-link:hover {
+  border-color: rgba(0, 230, 138, 0.55);
+  background: rgba(0, 230, 138, 0.12);
+  color: #b8ffe1;
+}
+
+.docs a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.docs a:hover {
+  color: var(--accent-2);
 }
 
 /* ─── Two-column layout ─── */
@@ -574,9 +616,9 @@ canvas {
   }
 
   .hero-badge {
-    width: 36px;
-    height: 36px;
-    font-size: 0.65rem;
+    min-width: 74px;
+    height: 28px;
+    font-size: 0.64rem;
   }
 }
 

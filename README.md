@@ -2,10 +2,14 @@
 
 Single-page simulator for a capacitive displacement sensor front-end using an LTC1043-style switched-cap topology.
 
+## Source Circuit References
+- Main page: <https://www.groundmotion.org/main.html>
+- Board/circuit PDF: <https://www.groundmotion.org/Yuma2.pdf>
+
 ## What This Simulates
 - Sensor geometry to capacitance (`Ca`, `Cb`) from physical dimensions.
 - Switched-cap charge transfer between sensor, `C3`, and `C4`.
-- Output behavior with leakage through configurable `R_eq`.
+- Output behavior with leakage through configurable `R_out_load`.
 - Frequency, position, and gap sweeps with live charts.
 - Solver convergence diagnostics (iteration trace + residual chart).
 
@@ -61,4 +65,3 @@ firebase deploy --only hosting --project ltc1043-sensor-sim
 CI/CD deploy:
 - PRs to `main`: preview deploy via `.github/workflows/firebase-hosting-pull-request.yml`
 - Push to `main`: live deploy via `.github/workflows/firebase-hosting-merge.yml`
-
