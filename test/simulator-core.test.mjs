@@ -61,6 +61,18 @@ test('state warm-start path returns finite and converged neighboring points', ()
   assert.ok(Number.isFinite(second.result.vOutSteadyV));
 });
 
+test('solver trace is collected when enabled', () => {
+  const solved = simulateWithState(
+    { ...DEFAULT_INPUTS },
+    null,
+    { ...DEFAULT_SOLVER, collectTrace: true },
+  );
+  assert.ok(Array.isArray(solved.trace));
+  assert.ok(solved.trace.length > 0);
+  assert.equal(solved.trace.length, solved.result.solverIterations);
+  assert.equal(solved.trace.at(-1).iteration, solved.result.solverIterations);
+});
+
 test('no NaN/Infinity across sampled operating range', () => {
   for (let i = 0; i < 120; i++) {
     const t = i / 119;

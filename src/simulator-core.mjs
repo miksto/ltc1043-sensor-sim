@@ -2,11 +2,12 @@ export const EPS0 = 8.8541878128e-12;
 
 export const DEFAULT_SOLVER = {
   tolV: 1e-9,
-  maxIter: 2000,
+  maxIter: 10000,
   transferGain: 1.0,
   useOutputClamp: true,
   clampMinV: -12,
   clampMaxV: 12,
+  collectTrace: false,
 };
 
 export const DEFAULT_INPUTS = {
@@ -17,12 +18,12 @@ export const DEFAULT_INPUTS = {
   position: 0.5,
   freqHz: 62500,
   vDrivePeakV: 5,
-  r10Ohm: 20000,
-  r11Ohm: 20000,
-  rEqOhm: 10000,
+  r10Ohm: 10000,
+  r11Ohm: 10000,
+  rEqOhm: 1_000_000,
   c3F: 4700e-12,
   c4F: 4700e-12,
-  ccF: 130e-12,
+  ccF: 10e-12,
   epsilonR: 1.0006,
 };
 
@@ -74,6 +75,7 @@ export function solvePeriodicSteadyState(derived, initialState = null, solver = 
   let iterations = 0;
   let qSensorC = 0;
   let qTransferC = 0;
+  const trace = solver.collectTrace ? [] : null;
 
   for (let i = 0; i < solver.maxIter; i++) {
     const prevV3 = state.v3;
@@ -90,13 +92,21 @@ export function solvePeriodicSteadyState(derived, initialState = null, solver = 
     qTransferC = step.qTransferC;
     residualV = Math.max(Math.abs(state.v3 - prevV3), Math.abs(state.v4 - prevV4));
     iterations = i + 1;
+    if (trace) {
+      trace.push({
+        iteration: iterations,
+        v3: state.v3,
+        v4: state.v4,
+        residualV,
+      });
+    }
 
     if (residualV < solver.tolV) {
-      return { converged: true, iterations, residualV, state, qSensorC, qTransferC };
+      return { converged: true, iterations, residualV, state, qSensorC, qTransferC, trace };
     }
   }
 
-  return { converged: false, iterations, residualV, state, qSensorC, qTransferC };
+  return { converged: false, iterations, residualV, state, qSensorC, qTransferC, trace };
 }
 
 export function simulateWithState(input, initialState = null, solver = DEFAULT_SOLVER) {
@@ -191,6 +201,7 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
       qTransferCycleC: solved.qTransferC,
     },
     state: solved.state,
+    trace: solved.trace || [],
   };
 }
 

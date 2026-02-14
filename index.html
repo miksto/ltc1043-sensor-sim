@@ -224,6 +224,24 @@
       text-align: right;
     }
 
+    .chart-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #5f7280;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .chart-controls select {
+      font: inherit;
+      color: inherit;
+      border: 1px solid #cdbca7;
+      border-radius: 6px;
+      padding: 0.15rem 0.35rem;
+      background: #fffefb;
+    }
+
     canvas {
       width: 100%;
       height: 250px;
@@ -452,7 +470,7 @@
           <article class="chart-card">
             <div class="chart-head">
               <p class="title">Vout vs Position Fraction</p>
-              <p class="sub">Position from 0 to 1</p>
+              <p class="sub">Centered sweep (p = 0.1 to 0.9)</p>
             </div>
             <canvas id="chartPos" width="900" height="260"></canvas>
           </article>
@@ -463,6 +481,28 @@
               <p class="sub">Gap sweep at fixed frequency and position</p>
             </div>
             <canvas id="chartGap" width="900" height="260"></canvas>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-head">
+              <p class="title">Solver Iteration Trace</p>
+              <p class="sub">Operating-point fixed-point iterations (V3 and Vout)</p>
+            </div>
+            <canvas id="chartSolverTrace" width="900" height="260"></canvas>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-head">
+              <p class="title">Solver Residual per Iteration</p>
+              <div class="chart-controls">
+                <label for="residualScale">Scale</label>
+                <select id="residualScale">
+                  <option value="linear">Linear</option>
+                  <option value="log">Log10</option>
+                </select>
+              </div>
+            </div>
+            <canvas id="chartSolverResidual" width="900" height="260"></canvas>
           </article>
         </section>
 
@@ -504,6 +544,7 @@
         poleHz: 306,
       };
       const SOLVER = { ...DEFAULT_SOLVER };
+      const POSITION_SWEEP_CENTER_TRAVEL_FRACTION = 0.8;
 
       /** @typedef {{
        * widthCm:number,heightCm:number,totalGapMm:number,position:number,freqHz:number,
@@ -531,14 +572,15 @@
         totalGapMm: 1.58,
         position: 0.5,
         positionOffsetMm: 0,
+        residualScale: "linear",
         freqHz: 62500,
         vDrivePeakV: 5,
-        r10Ohm: 20000,
-        r11Ohm: 20000,
-        rEqOhm: 10000,
+        r10Ohm: 10000,
+        r11Ohm: 10000,
+        rEqOhm: 1000000,
         c3F: 4700,
         c4F: 4700,
-        ccF: 130,
+        ccF: 10,
         epsilonR: 1.0006,
         minGapMm: 0.05,
 
@@ -554,6 +596,7 @@
       const ids = [
         "widthCm", "heightCm", "totalGapMm", "minGapMm", "position", "positionText", "positionOffsetMm", "freqHz",
         "plateAreaInfo",
+        "residualScale",
         "vDrivePeakV", "epsilonR", "r10Ohm", "r11Ohm", "rEqOhm", "c3F", "c4F", "ccF",
         "freqMinHz", "freqMaxHz", "freqPoints", "gapMinMm", "gapMaxMm", "gapPoints", "positionPoints"
       ];
@@ -571,6 +614,8 @@
         freq: document.getElementById("chartFreq"),
         pos: document.getElementById("chartPos"),
         gap: document.getElementById("chartGap"),
+        solverTrace: document.getElementById("chartSolverTrace"),
+        solverResidual: document.getElementById("chartSolverResidual"),
       };
 
       function setDefaults() {
@@ -623,8 +668,8 @@
       }
 
       /** @param {SimulationInputs} p */
-      function simulateWithState(p, initialState) {
-        return coreSimulateWithState(p, initialState, SOLVER);
+      function simulateWithState(p, initialState, solverOverride = null) {
+        return coreSimulateWithState(p, initialState, solverOverride || SOLVER);
       }
 
       /** @param {SimulationInputs} p */
@@ -636,7 +681,7 @@
         const { inputs, sweep } = readInputs();
         syncPositionDisplays();
         updatePlateAreaInfo();
-        const op = simulateWithState(inputs, null);
+        const op = simulateWithState(inputs, null, { ...SOLVER, collectTrace: true });
         const res = op.result;
         renderMetrics(inputs, res);
         renderValidation(inputs);
@@ -663,6 +708,59 @@
           lineColor: "#2a7f62",
           xLog: false,
         });
+
+        const solverTraceData = buildSolverTraceData(op.trace || []);
+        drawChart(canvases.solverTrace, solverTraceData.x, solverTraceData.v3, {
+          titleX: "Iteration",
+          titleY: "Voltage (V)",
+          lineColor: "#6c5ce7",
+          xLog: false,
+          lineLabel: "V3",
+          secondaryY: solverTraceData.vOut,
+          secondaryColor: "#f39c12",
+          secondaryLabel: "Vout",
+        });
+
+        const residualScale = el.residualScale?.value === "log" ? "log" : "linear";
+        const residualData = buildSolverResidualData(op.trace || [], residualScale);
+        drawChart(canvases.solverResidual, residualData.x, residualData.y, {
+          titleX: "Iteration",
+          titleY: residualData.yLabel,
+          lineColor: "#2d98da",
+          xLog: false,
+          lineLabel: residualData.lineLabel,
+        });
+      }
+
+      function buildSolverTraceData(trace) {
+        const x = [];
+        const v3 = [];
+        const vOut = [];
+        for (const t of trace) {
+          x.push(t.iteration);
+          v3.push(t.v3);
+          vOut.push(-t.v4);
+        }
+        return { x, v3, vOut };
+      }
+
+      function buildSolverResidualData(trace, scale) {
+        const x = [];
+        const y = [];
+        for (const t of trace) {
+          x.push(t.iteration);
+          if (scale === "log") {
+            y.push(Math.log10(Math.max(Math.abs(t.residualV), 1e-18)));
+          } else {
+            y.push(Math.max(0, t.residualV));
+          }
+        }
+        return {
+          x,
+          y,
+          yLabel: scale === "log" ? "log10(Residual V)" : "Residual (V)",
+          lineLabel: scale === "log" ? "log10 residual" : "residual",
+        };
       }
 
       function sweepFrequency(base, sweep, seedState) {
@@ -681,9 +779,12 @@
         const n = sweep.positionPoints;
         const x = [];
         const y = [];
+        const halfSpan = 0.5 * POSITION_SWEEP_CENTER_TRAVEL_FRACTION;
+        const pMin = clamp(0.5 - halfSpan, 0, 1);
+        const pMax = clamp(0.5 + halfSpan, 0, 1);
         let state = seedState ? { ...seedState } : null;
         for (let i = 0; i < n; i++) {
-          const p = i / (n - 1);
+          const p = pMin + (i / (n - 1)) * (pMax - pMin);
           x.push(p);
           const solved = simulateWithState({ ...base, position: p }, state);
           y.push(solved.result.vOutSteadyV);
@@ -793,6 +894,13 @@
         const h = cssH;
         ctx.clearRect(0, 0, w, h);
 
+        if (!Array.isArray(xVals) || !Array.isArray(yVals) || xVals.length === 0 || yVals.length === 0) {
+          ctx.fillStyle = "#6d7a86";
+          ctx.font = "13px Menlo, Consolas, monospace";
+          ctx.fillText("No data", 14, 24);
+          return;
+        }
+
         const padL = 72;
         const padR = 16;
         const padT = 12;
@@ -801,7 +909,9 @@
         const plotW = Math.max(20, w - padL - padR);
         const plotH = Math.max(20, h - padT - padB);
 
-        const finiteY = yVals.filter(Number.isFinite);
+        const ySeries = [yVals];
+        if (Array.isArray(cfg.secondaryY)) ySeries.push(cfg.secondaryY);
+        const finiteY = ySeries.flat().filter(Number.isFinite);
         let yMin = finiteY.length ? Math.min(...finiteY) : -1;
         let yMax = finiteY.length ? Math.max(...finiteY) : 1;
         if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) {
@@ -890,6 +1000,27 @@
         }
         ctx.stroke();
 
+        if (Array.isArray(cfg.secondaryY)) {
+          ctx.strokeStyle = cfg.secondaryColor || "#cc6f4d";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          moved = false;
+          const n = Math.min(xVals.length, cfg.secondaryY.length);
+          for (let i = 0; i < n; i++) {
+            const y = cfg.secondaryY[i];
+            if (!Number.isFinite(y)) continue;
+            const px = xToPx(xVals[i]);
+            const py = yToPx(y);
+            if (!moved) {
+              ctx.moveTo(px, py);
+              moved = true;
+            } else {
+              ctx.lineTo(px, py);
+            }
+          }
+          ctx.stroke();
+        }
+
         ctx.fillStyle = "#34495b";
         ctx.font = "12px Menlo, Consolas, monospace";
         ctx.fillText(cfg.titleX, padL + plotW / 2 - 44, h - 8);
@@ -899,6 +1030,24 @@
         ctx.rotate(-Math.PI / 2);
         ctx.fillText(cfg.titleY, 0, 0);
         ctx.restore();
+
+        if (cfg.lineLabel || cfg.secondaryLabel) {
+          const legendY = padT + 12;
+          let legendX = padL + plotW - 130;
+          if (cfg.lineLabel) {
+            ctx.fillStyle = cfg.lineColor;
+            ctx.fillRect(legendX, legendY - 8, 10, 3);
+            ctx.fillStyle = "#445b68";
+            ctx.fillText(cfg.lineLabel, legendX + 14, legendY);
+            legendX += 56;
+          }
+          if (cfg.secondaryLabel) {
+            ctx.fillStyle = cfg.secondaryColor || "#cc6f4d";
+            ctx.fillRect(legendX, legendY - 8, 10, 3);
+            ctx.fillStyle = "#445b68";
+            ctx.fillText(cfg.secondaryLabel, legendX + 14, legendY);
+          }
+        }
       }
 
       function buildLinearTicks(min, max, target) {
