@@ -320,7 +320,7 @@
           <div class="field wide">
             <label for="position">Position fraction p (0 left, 1 right)</label>
             <div class="range-row">
-              <input id="position" type="range" min="0" max="1" step="0.001" />
+              <input id="position" type="range" min="0" max="1" step="any" />
               <input id="positionText" type="text" readonly />
             </div>
           </div>
@@ -357,6 +357,11 @@
             <div class="field">
               <label for="r11Ohm">R11 (Ω)</label>
               <input id="r11Ohm" type="number" step="any" min="1" />
+            </div>
+
+            <div class="field">
+              <label for="rEqOhm">R_eq (Ω, output load)</label>
+              <input id="rEqOhm" type="number" step="any" min="1" />
             </div>
 
             <div class="field">
@@ -472,7 +477,7 @@
             Per-cycle charge model:
             <code>Q_packet = 2·Vpeak·(Ca-Cb)</code>,
             <code>Q_to_C4 = Q_packet·C3/(C3+C4)</code>,
-            <code>R_eq = R10||R11</code>,
+            <code>R_eq = user-defined output load</code>,
             <code>α = exp(-T/(R_eq·C4))</code>,
             <code>Vout[n+1]=α·Vout[n]+Q_to_C4/C4</code>,
             and steady-state <code>Vout = (Q_to_C4/C4)/(1-α)</code> with polarity mapped so rightward motion is positive.
@@ -497,7 +502,7 @@
 
       /** @typedef {{
        * widthCm:number,heightCm:number,totalGapMm:number,position:number,freqHz:number,
-       * vDrivePeakV:number,r10Ohm:number,r11Ohm:number,c3F:number,c4F:number,ccF:number,
+       * vDrivePeakV:number,r10Ohm:number,r11Ohm:number,rEqOhm:number,c3F:number,c4F:number,ccF:number,
        * epsilonR:number,minGapMm:number
        * }} SimulationInputs */
 
@@ -523,6 +528,7 @@
         vDrivePeakV: 5,
         r10Ohm: 20000,
         r11Ohm: 20000,
+        rEqOhm: 10000,
         c3F: 4700,
         c4F: 4700,
         ccF: 130,
@@ -541,7 +547,7 @@
       const ids = [
         "widthCm", "heightCm", "totalGapMm", "minGapMm", "position", "positionText", "positionOffsetMm", "freqHz",
         "plateAreaInfo",
-        "vDrivePeakV", "epsilonR", "r10Ohm", "r11Ohm", "c3F", "c4F", "ccF",
+        "vDrivePeakV", "epsilonR", "r10Ohm", "r11Ohm", "rEqOhm", "c3F", "c4F", "ccF",
         "freqMinHz", "freqMaxHz", "freqPoints", "gapMinMm", "gapMaxMm", "gapPoints", "positionPoints"
       ];
 
@@ -580,6 +586,7 @@
           vDrivePeakV: toPos(el.vDrivePeakV.value, defaults.vDrivePeakV),
           r10Ohm: toPos(el.r10Ohm.value, defaults.r10Ohm),
           r11Ohm: toPos(el.r11Ohm.value, defaults.r11Ohm),
+          rEqOhm: toPos(el.rEqOhm.value, defaults.rEqOhm),
           c3F: toPos(el.c3F.value, defaults.c3F) * 1e-12,
           c4F: toPos(el.c4F.value, defaults.c4F) * 1e-12,
           ccF: Math.max(0, toNum(el.ccF.value, defaults.ccF)) * 1e-12,
@@ -626,7 +633,7 @@
         const cSum = Math.max(p.c3F + p.c4F, 1e-18);
         const qToC4C = qPacketC * (p.c3F / cSum);
 
-        const rEqOhm = (p.r10Ohm * p.r11Ohm) / Math.max(p.r10Ohm + p.r11Ohm, 1e-18);
+        const rEqOhm = Math.max(p.rEqOhm, 1e-18);
         const tauOutS = Math.max(rEqOhm * p.c4F, 1e-18);
 
         const T = 1 / Math.max(p.freqHz, 1e-12);
@@ -748,7 +755,7 @@
           ["τA = R10·(Ca+Cc)", fmtSec(res.tauAS)],
           ["τB = R11·(Cb+Cc)", fmtSec(res.tauBS)],
           ["f_max for full-charge (5τ rule)", fmtHz(res.fWarningThresholdHz)],
-          ["R_eq (R10||R11)", fmtOhm(res.rEqOhm)],
+          ["R_eq (used)", fmtOhm(res.rEqOhm)],
           ["Left gap dL", `${(res.dLeftM * 1e3).toFixed(4)} mm`],
           ["Right gap dR", `${(res.dRightM * 1e3).toFixed(4)} mm`],
           ["α", res.alpha.toFixed(6)],
