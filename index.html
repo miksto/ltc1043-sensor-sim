@@ -1,0 +1,1123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LTC1043 Capacitive Front-End Simulator</title>
+  <style>
+    :root {
+      --bg: #f5f2eb;
+      --ink: #1f2d3a;
+      --panel: #fffdf8;
+      --line: #c9bdab;
+      --accent: #1f6f8b;
+      --accent-2: #e07a5f;
+      --good: #2a7f62;
+      --warn: #c7652a;
+      --shadow: 0 8px 22px rgba(25, 39, 52, 0.09);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Avenir Next", "Gill Sans", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 5%, #fef6dd 0, transparent 25%),
+        radial-gradient(circle at 85% 0%, #dbedf4 0, transparent 20%),
+        var(--bg);
+      line-height: 1.35;
+    }
+
+    .wrap {
+      width: min(1200px, 96vw);
+      margin: 1rem auto 2rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .hero {
+      padding: 1rem 1.2rem;
+      background: linear-gradient(120deg, #fef8ea, #f2f9fc);
+      border: 1px solid #d7c9b8;
+      box-shadow: var(--shadow);
+      border-radius: 16px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(1.15rem, 2.4vw, 1.8rem);
+      letter-spacing: 0.02em;
+    }
+
+    .hero p {
+      margin: 0.45rem 0 0;
+      font-size: 0.95rem;
+      max-width: 95ch;
+    }
+
+    .layout {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 340px 1fr;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0.9rem;
+      box-shadow: var(--shadow);
+    }
+
+    .panel h2 {
+      margin: 0 0 0.55rem;
+      font-size: 1rem;
+      border-bottom: 1px dashed #d4c8b7;
+      padding-bottom: 0.35rem;
+    }
+
+    .field-grid {
+      display: grid;
+      gap: 0.55rem;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.18rem;
+    }
+
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+
+    .field label {
+      font-size: 0.78rem;
+      color: #4f5c67;
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid #b8ad9e;
+      border-radius: 8px;
+      padding: 0.35rem 0.45rem;
+      font-size: 0.92rem;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    input[type="number"]:focus,
+    input[type="text"]:focus,
+    input[type="range"]:focus {
+      outline: 2px solid #94c7d7;
+      outline-offset: 1px;
+    }
+
+    input[readonly] {
+      background: #f2eee6;
+      color: #6e7d88;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    details {
+      margin-top: 0.55rem;
+      border: 1px dashed #ccbca7;
+      border-radius: 10px;
+      padding: 0.4rem 0.5rem;
+      background: #fffaf0;
+    }
+
+    details > summary {
+      cursor: pointer;
+      font-size: 0.85rem;
+      user-select: none;
+      font-weight: 600;
+    }
+
+    .metrics-grid {
+      display: grid;
+      gap: 0.6rem;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .metric {
+      border: 1px solid #d7ccbc;
+      border-radius: 10px;
+      padding: 0.55rem 0.65rem;
+      background: #fff;
+    }
+
+    .metric .k {
+      font-size: 0.75rem;
+      color: #5f6c78;
+    }
+
+    .metric .v {
+      margin-top: 0.2rem;
+      font-size: 1.03rem;
+      font-weight: 700;
+      color: #133746;
+      word-break: break-word;
+    }
+
+    .warn {
+      color: var(--warn);
+      font-weight: 700;
+      font-size: 0.87rem;
+      margin-top: 0.4rem;
+    }
+
+    .ok {
+      color: var(--good);
+      font-size: 0.85rem;
+      margin-top: 0.4rem;
+    }
+
+    .charts {
+      display: grid;
+      gap: 0.8rem;
+      grid-template-columns: 1fr;
+    }
+
+    .chart-card {
+      border: 1px solid #d8ccb9;
+      border-radius: 12px;
+      padding: 0.5rem;
+      background: #fff;
+    }
+
+    .chart-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      align-items: baseline;
+      padding: 0 0.1rem 0.3rem;
+    }
+
+    .chart-head .title {
+      margin: 0;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .chart-head .sub {
+      margin: 0;
+      color: #667784;
+      font-size: 0.78rem;
+      text-align: right;
+    }
+
+    canvas {
+      width: 100%;
+      height: 250px;
+      display: block;
+      border: 1px solid #e3d8c8;
+      border-radius: 8px;
+      background: linear-gradient(to bottom, #fffefb, #fdfaf4);
+    }
+
+    .validation {
+      border-top: 1px dashed #ccbba4;
+      margin-top: 0.7rem;
+      padding-top: 0.55rem;
+      font-size: 0.9rem;
+    }
+
+    .validation .row {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr 1fr;
+      gap: 0.4rem;
+      padding: 0.22rem 0;
+      border-bottom: 1px dotted #ece2d3;
+    }
+
+    .validation .head {
+      font-weight: 700;
+      color: #3c4a56;
+    }
+
+    .docs {
+      font-size: 0.88rem;
+      color: #31414f;
+    }
+
+    .docs code {
+      background: #f2ebdf;
+      border-radius: 4px;
+      padding: 0.02rem 0.25rem;
+      font-family: "Menlo", "Consolas", monospace;
+      font-size: 0.85em;
+    }
+
+    @media (max-width: 960px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      canvas {
+        height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>LTC1043 Capacitive Sensor Front-End Simulator</h1>
+      <p>
+        Physics-based simulation for the capacitive displacement front-end from the FBV documentation.
+        This models only the sensor + switched-cap stage (Ca/Cb/Cc, R10/R11, C3/C4, switching frequency).
+      </p>
+    </section>
+
+    <section class="layout">
+      <aside class="panel" aria-label="Inputs panel">
+        <h2>Inputs</h2>
+
+        <div class="field-grid">
+          <div class="field">
+            <label for="widthCm">Plate width (cm)</label>
+            <input id="widthCm" type="number" step="any" min="0.001" />
+          </div>
+
+          <div class="field">
+            <label for="heightCm">Plate height (cm)</label>
+            <input id="heightCm" type="number" step="any" min="0.001" />
+          </div>
+
+          <div class="field wide">
+            <label for="plateAreaInfo">Computed plate area (cm²)</label>
+            <input id="plateAreaInfo" type="text" readonly />
+          </div>
+
+          <div class="field">
+            <label for="totalGapMm">Total outer-plate separation G (mm)</label>
+            <input id="totalGapMm" type="number" step="any" min="0.0001" />
+          </div>
+
+          <div class="field">
+            <label for="minGapMm">Minimum gap clamp (mm)</label>
+            <input id="minGapMm" type="number" step="any" min="0.00001" />
+          </div>
+
+          <div class="field wide">
+            <label for="position">Position fraction p (0 left, 1 right)</label>
+            <div class="range-row">
+              <input id="position" type="range" min="0" max="1" step="0.001" />
+              <input id="positionText" type="text" readonly />
+            </div>
+          </div>
+
+          <div class="field wide">
+            <label for="positionOffsetMm">Offset from center (mm, +right / -left)</label>
+            <input id="positionOffsetMm" type="number" step="0.1" />
+          </div>
+
+          <div class="field wide">
+            <label for="freqHz">Switching frequency (Hz)</label>
+            <input id="freqHz" type="number" step="any" min="1" />
+          </div>
+        </div>
+
+        <details open>
+          <summary>Advanced Components</summary>
+          <div class="field-grid" style="margin-top: 0.45rem;">
+            <div class="field">
+              <label for="vDrivePeakV">Drive amplitude Vpeak (V)</label>
+              <input id="vDrivePeakV" type="number" step="any" min="0.01" />
+            </div>
+
+            <div class="field">
+              <label for="epsilonR">Dielectric εr (air fixed)</label>
+              <input id="epsilonR" type="number" readonly />
+            </div>
+
+            <div class="field">
+              <label for="r10Ohm">R10 (Ω)</label>
+              <input id="r10Ohm" type="number" step="any" min="1" />
+            </div>
+
+            <div class="field">
+              <label for="r11Ohm">R11 (Ω)</label>
+              <input id="r11Ohm" type="number" step="any" min="1" />
+            </div>
+
+            <div class="field">
+              <label for="c3F">C3 (pF)</label>
+              <input id="c3F" type="number" step="any" min="0.001" />
+            </div>
+
+            <div class="field">
+              <label for="c4F">C4 (pF)</label>
+              <input id="c4F" type="number" step="any" min="0.001" />
+            </div>
+
+            <div class="field wide">
+              <label for="ccF">Cc stray (pF)</label>
+              <input id="ccF" type="number" step="any" min="0" />
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>Sweep Controls</summary>
+          <div class="field-grid" style="margin-top: 0.45rem;">
+            <div class="field">
+              <label for="freqMinHz">Freq min (Hz)</label>
+              <input id="freqMinHz" type="number" step="any" min="1" />
+            </div>
+            <div class="field">
+              <label for="freqMaxHz">Freq max (Hz)</label>
+              <input id="freqMaxHz" type="number" step="any" min="1" />
+            </div>
+            <div class="field">
+              <label for="freqPoints">Freq points</label>
+              <input id="freqPoints" type="number" step="any" min="8" max="500" />
+            </div>
+
+            <div class="field">
+              <label for="gapMinMm">Gap min (mm)</label>
+              <input id="gapMinMm" type="number" step="any" min="0.0001" />
+            </div>
+            <div class="field">
+              <label for="gapMaxMm">Gap max (mm)</label>
+              <input id="gapMaxMm" type="number" step="any" min="0.0001" />
+            </div>
+            <div class="field">
+              <label for="gapPoints">Gap points</label>
+              <input id="gapPoints" type="number" step="any" min="8" max="500" />
+            </div>
+
+            <div class="field wide">
+              <label for="positionPoints">Position points</label>
+              <input id="positionPoints" type="number" step="any" min="8" max="500" />
+            </div>
+          </div>
+        </details>
+      </aside>
+
+      <section style="display:grid; gap: 1rem;">
+        <section class="panel" aria-label="Metrics panel">
+          <h2>Simulation Metrics</h2>
+          <div class="metrics-grid" id="metrics"></div>
+          <div id="warnings"></div>
+
+          <div class="validation">
+            <h2 style="margin-top:0;">Validation (Reference-Only)</h2>
+            <div class="row head">
+              <div>Metric</div>
+              <div>Computed</div>
+              <div>Reference / Deviation</div>
+            </div>
+            <div id="validationRows"></div>
+            <p style="margin:0.45rem 0 0; font-size:0.8rem; color:#5f6d7a;">
+              Reference values from the PDF are displayed only for comparison and are not used in core equations.
+            </p>
+          </div>
+        </section>
+
+        <section class="panel charts" aria-label="Charts panel">
+          <h2>Charts</h2>
+
+          <article class="chart-card">
+            <div class="chart-head">
+              <p class="title">Vout vs Switching Frequency</p>
+              <p class="sub">Log-frequency sweep</p>
+            </div>
+            <canvas id="chartFreq" width="900" height="260"></canvas>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-head">
+              <p class="title">Vout vs Position Fraction</p>
+              <p class="sub">Position from 0 to 1</p>
+            </div>
+            <canvas id="chartPos" width="900" height="260"></canvas>
+          </article>
+
+          <article class="chart-card">
+            <div class="chart-head">
+              <p class="title">Vout vs Total Separation G</p>
+              <p class="sub">Gap sweep at fixed frequency and position</p>
+            </div>
+            <canvas id="chartGap" width="900" height="260"></canvas>
+          </article>
+        </section>
+
+        <section class="panel docs" aria-label="Documentation panel">
+          <h2>Model Notes</h2>
+          <p>
+            Capacitances are computed with ideal parallel-plate physics:
+            <code>C = ε0·εr·A/d</code> where <code>A = width·height</code> and
+            <code>dLeft = max(minGap, p·G)</code>, <code>dRight = max(minGap, (1-p)·G)</code>.
+          </p>
+          <p>
+            Per-cycle charge model:
+            <code>Q_packet = 2·Vpeak·(Ca-Cb)</code>,
+            <code>Q_to_C4 = Q_packet·C3/(C3+C4)</code>,
+            <code>R_eq = R10||R11</code>,
+            <code>α = exp(-T/(R_eq·C4))</code>,
+            <code>Vout[n+1]=α·Vout[n]+Q_to_C4/C4</code>,
+            and steady-state <code>Vout = (Q_to_C4/C4)/(1-α)</code> with polarity mapped so rightward motion is positive.
+          </p>
+          <p>
+            Simplifications: front-end only (no U1A/integrator/coil loop), no fringing, no plate-thickness effects,
+            and full-charge assumption kept with warning when half-cycle is below <code>5·max(τA, τB)</code>.
+          </p>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const EPS0 = 8.8541878128e-12;
+      const REF = {
+        centeredCapPF: 48.2,
+        slopeVPerMm: 1.25,
+        poleHz: 306,
+      };
+
+      /** @typedef {{
+       * widthCm:number,heightCm:number,totalGapMm:number,position:number,freqHz:number,
+       * vDrivePeakV:number,r10Ohm:number,r11Ohm:number,c3F:number,c4F:number,ccF:number,
+       * epsilonR:number,minGapMm:number
+       * }} SimulationInputs */
+
+      /** @typedef {{
+       * freqMinHz:number,freqMaxHz:number,freqPoints:number,
+       * gapMinMm:number,gapMaxMm:number,gapPoints:number,positionPoints:number
+       * }} SweepConfig */
+
+      /** @typedef {{
+       * caF:number,cbF:number,deltaCF:number,qPacketC:number,qToC4C:number,
+       * vOutSteadyV:number,tauOutS:number,fPoleHz:number,warnings:string[],
+       * dLeftM:number,dRightM:number,alpha:number,rEqOhm:number,
+       * tauAS:number,tauBS:number,fWarningThresholdHz:number
+       * }} SimulationResult */
+
+      const defaults = {
+        widthCm: Math.sqrt(43.5),
+        heightCm: Math.sqrt(43.5),
+        totalGapMm: 1.58,
+        position: 0.5,
+        positionOffsetMm: 0,
+        freqHz: 62500,
+        vDrivePeakV: 5,
+        r10Ohm: 20000,
+        r11Ohm: 20000,
+        c3F: 4700,
+        c4F: 4700,
+        ccF: 130,
+        epsilonR: 1.0006,
+        minGapMm: 0.05,
+
+        freqMinHz: 1_000,
+        freqMaxHz: 500_000,
+        freqPoints: 180,
+        gapMinMm: 0.4,
+        gapMaxMm: 3.0,
+        gapPoints: 140,
+        positionPoints: 160,
+      };
+
+      const ids = [
+        "widthCm", "heightCm", "totalGapMm", "minGapMm", "position", "positionText", "positionOffsetMm", "freqHz",
+        "plateAreaInfo",
+        "vDrivePeakV", "epsilonR", "r10Ohm", "r11Ohm", "c3F", "c4F", "ccF",
+        "freqMinHz", "freqMaxHz", "freqPoints", "gapMinMm", "gapMaxMm", "gapPoints", "positionPoints"
+      ];
+
+      const el = {};
+      for (const id of ids) {
+        el[id] = document.getElementById(id);
+      }
+
+      const metricsEl = document.getElementById("metrics");
+      const warningsEl = document.getElementById("warnings");
+      const validationRowsEl = document.getElementById("validationRows");
+
+      const canvases = {
+        freq: document.getElementById("chartFreq"),
+        pos: document.getElementById("chartPos"),
+        gap: document.getElementById("chartGap"),
+      };
+
+      function setDefaults() {
+        for (const [key, value] of Object.entries(defaults)) {
+          if (!el[key]) continue;
+          el[key].value = String(value);
+        }
+        syncPositionDisplays();
+        updatePlateAreaInfo();
+      }
+
+      function readInputs() {
+        /** @type {SimulationInputs} */
+        const inputs = {
+          widthCm: toPos(el.widthCm.value, defaults.widthCm),
+          heightCm: toPos(el.heightCm.value, defaults.heightCm),
+          totalGapMm: toPos(el.totalGapMm.value, defaults.totalGapMm),
+          position: clamp(toNum(el.position.value, defaults.position), 0, 1),
+          freqHz: toPos(el.freqHz.value, defaults.freqHz),
+          vDrivePeakV: toPos(el.vDrivePeakV.value, defaults.vDrivePeakV),
+          r10Ohm: toPos(el.r10Ohm.value, defaults.r10Ohm),
+          r11Ohm: toPos(el.r11Ohm.value, defaults.r11Ohm),
+          c3F: toPos(el.c3F.value, defaults.c3F) * 1e-12,
+          c4F: toPos(el.c4F.value, defaults.c4F) * 1e-12,
+          ccF: Math.max(0, toNum(el.ccF.value, defaults.ccF)) * 1e-12,
+          epsilonR: defaults.epsilonR,
+          minGapMm: toPos(el.minGapMm.value, defaults.minGapMm),
+        };
+
+        /** @type {SweepConfig} */
+        const sweep = {
+          freqMinHz: toPos(el.freqMinHz.value, defaults.freqMinHz),
+          freqMaxHz: toPos(el.freqMaxHz.value, defaults.freqMaxHz),
+          freqPoints: Math.round(toPos(el.freqPoints.value, defaults.freqPoints)),
+          gapMinMm: toPos(el.gapMinMm.value, defaults.gapMinMm),
+          gapMaxMm: toPos(el.gapMaxMm.value, defaults.gapMaxMm),
+          gapPoints: Math.round(toPos(el.gapPoints.value, defaults.gapPoints)),
+          positionPoints: Math.round(toPos(el.positionPoints.value, defaults.positionPoints)),
+        };
+
+        if (sweep.freqMaxHz <= sweep.freqMinHz) {
+          sweep.freqMaxHz = sweep.freqMinHz * 1.1;
+        }
+        if (sweep.gapMaxMm <= sweep.gapMinMm) {
+          sweep.gapMaxMm = sweep.gapMinMm * 1.1;
+        }
+
+        return { inputs, sweep };
+      }
+
+      /** @param {SimulationInputs} p */
+      function simulate(p) {
+        const warnings = [];
+        const areaM2 = (p.widthCm * 1e-2) * (p.heightCm * 1e-2);
+        const totalGapM = p.totalGapMm * 1e-3;
+        const minGapM = p.minGapMm * 1e-3;
+
+        const dLeftM = Math.max(minGapM, p.position * totalGapM);
+        const dRightM = Math.max(minGapM, (1 - p.position) * totalGapM);
+
+        const caF = (EPS0 * p.epsilonR * areaM2) / Math.max(dLeftM, 1e-15);
+        const cbF = (EPS0 * p.epsilonR * areaM2) / Math.max(dRightM, 1e-15);
+        const deltaCF = caF - cbF;
+
+        const qPacketC = 2 * p.vDrivePeakV * deltaCF;
+        const cSum = Math.max(p.c3F + p.c4F, 1e-18);
+        const qToC4C = qPacketC * (p.c3F / cSum);
+
+        const rEqOhm = (p.r10Ohm * p.r11Ohm) / Math.max(p.r10Ohm + p.r11Ohm, 1e-18);
+        const tauOutS = Math.max(rEqOhm * p.c4F, 1e-18);
+
+        const T = 1 / Math.max(p.freqHz, 1e-12);
+        const alpha = Math.exp(-T / tauOutS);
+        const denom = Math.max(1 - alpha, 1e-15);
+        const vStep = qToC4C / Math.max(p.c4F, 1e-18);
+
+        const vOutRaw = vStep / denom;
+        // Mapping output polarity so position increase (right shift) is positive.
+        const vOutSteadyV = -vOutRaw;
+
+        const fPoleHz = 1 / (2 * Math.PI * tauOutS);
+
+        const tHalf = 1 / (2 * Math.max(p.freqHz, 1e-12));
+        const tauA = p.r10Ohm * (caF + p.ccF);
+        const tauB = p.r11Ohm * (cbF + p.ccF);
+        const tauMax = Math.max(tauA, tauB);
+        const fWarningThresholdHz = 1 / (10 * Math.max(tauMax, 1e-18));
+        if (tHalf < 5 * tauMax) {
+          warnings.push("Full-charge assumption may be invalid at this frequency.");
+        }
+
+        if (!Number.isFinite(vOutSteadyV)) {
+          warnings.push("Numeric instability detected; check parameter ranges.");
+        }
+
+        return {
+          caF,
+          cbF,
+          deltaCF,
+          qPacketC,
+          qToC4C,
+          vOutSteadyV,
+          tauOutS,
+          fPoleHz,
+          warnings,
+          dLeftM,
+          dRightM,
+          alpha,
+          rEqOhm,
+          tauAS: tauA,
+          tauBS: tauB,
+          fWarningThresholdHz,
+        };
+      }
+
+      function run() {
+        const { inputs, sweep } = readInputs();
+        syncPositionDisplays();
+        updatePlateAreaInfo();
+        const res = simulate(inputs);
+        renderMetrics(inputs, res);
+        renderValidation(inputs);
+
+        const freqData = sweepFrequency(inputs, sweep);
+        const posData = sweepPosition(inputs, sweep);
+        const gapData = sweepGap(inputs, sweep);
+
+        drawChart(canvases.freq, freqData.x, freqData.y, {
+          titleX: "Frequency (Hz)",
+          titleY: "Vout (V)",
+          lineColor: "#1f6f8b",
+          xLog: true,
+        });
+        drawChart(canvases.pos, posData.x, posData.y, {
+          titleX: "Position fraction",
+          titleY: "Vout (V)",
+          lineColor: "#e07a5f",
+          xLog: false,
+        });
+        drawChart(canvases.gap, gapData.x, gapData.y, {
+          titleX: "Total separation G (mm)",
+          titleY: "Vout (V)",
+          lineColor: "#2a7f62",
+          xLog: false,
+        });
+      }
+
+      function sweepFrequency(base, sweep) {
+        const x = logSpace(sweep.freqMinHz, sweep.freqMaxHz, sweep.freqPoints);
+        const y = x.map((f) => simulate({ ...base, freqHz: f }).vOutSteadyV);
+        return { x, y };
+      }
+
+      function sweepPosition(base, sweep) {
+        const n = sweep.positionPoints;
+        const x = [];
+        const y = [];
+        for (let i = 0; i < n; i++) {
+          const p = i / (n - 1);
+          x.push(p);
+          y.push(simulate({ ...base, position: p }).vOutSteadyV);
+        }
+        return { x, y };
+      }
+
+      function sweepGap(base, sweep) {
+        const n = sweep.gapPoints;
+        const x = [];
+        const y = [];
+        for (let i = 0; i < n; i++) {
+          const g = sweep.gapMinMm + (i / (n - 1)) * (sweep.gapMaxMm - sweep.gapMinMm);
+          x.push(g);
+          y.push(simulate({ ...base, totalGapMm: g }).vOutSteadyV);
+        }
+        return { x, y };
+      }
+
+      function renderMetrics(inputs, res) {
+        const items = [
+          ["Ca", fmtCap(res.caF)],
+          ["Cb", fmtCap(res.cbF)],
+          ["ΔC = Ca-Cb", fmtCap(res.deltaCF)],
+          ["Q_packet", fmtCharge(res.qPacketC)],
+          ["Q_to_C4", fmtCharge(res.qToC4C)],
+          ["Vout steady", fmtVolt(res.vOutSteadyV)],
+          ["Output pole f", fmtHz(res.fPoleHz)],
+          ["τ_out", fmtSec(res.tauOutS)],
+          ["τA = R10·(Ca+Cc)", fmtSec(res.tauAS)],
+          ["τB = R11·(Cb+Cc)", fmtSec(res.tauBS)],
+          ["f_max for full-charge (5τ rule)", fmtHz(res.fWarningThresholdHz)],
+          ["R_eq (R10||R11)", fmtOhm(res.rEqOhm)],
+          ["Left gap dL", `${(res.dLeftM * 1e3).toFixed(4)} mm`],
+          ["Right gap dR", `${(res.dRightM * 1e3).toFixed(4)} mm`],
+          ["α", res.alpha.toFixed(6)],
+        ];
+
+        metricsEl.innerHTML = items.map(([k, v]) => `
+          <div class="metric">
+            <div class="k">${escapeHtml(k)}</div>
+            <div class="v">${escapeHtml(v)}</div>
+          </div>`).join("");
+
+        if (res.warnings.length > 0) {
+          warningsEl.innerHTML = `<div class="warn">${escapeHtml(res.warnings.join(" "))}</div>`;
+        } else {
+          warningsEl.innerHTML = `<div class="ok">Full-charge assumption check: OK at current frequency.</div>`;
+        }
+      }
+
+      function renderValidation(baseInputs) {
+        const centered = simulate({ ...baseInputs, position: 0.5, freqHz: 62500, totalGapMm: 1.58, widthCm: Math.sqrt(43.5), heightCm: Math.sqrt(43.5) });
+
+        const p0 = 0.5;
+        const dp = 1e-4;
+        const left = simulate({ ...baseInputs, position: p0 - dp, freqHz: 62500, totalGapMm: 1.58, widthCm: Math.sqrt(43.5), heightCm: Math.sqrt(43.5) }).vOutSteadyV;
+        const right = simulate({ ...baseInputs, position: p0 + dp, freqHz: 62500, totalGapMm: 1.58, widthCm: Math.sqrt(43.5), heightCm: Math.sqrt(43.5) }).vOutSteadyV;
+
+        const dxMm = 2 * dp * 1.58;
+        const slopeVPerMm = (right - left) / Math.max(dxMm, 1e-15);
+
+        const rows = [
+          {
+            k: "Centered capacitance (each)",
+            c: `${(centered.caF * 1e12).toFixed(3)} pF`,
+            r: `${REF.centeredCapPF.toFixed(1)} pF (${pctDelta(centered.caF * 1e12, REF.centeredCapPF)})`,
+          },
+          {
+            k: "Local slope dVout/dx near p=0.5",
+            c: `${slopeVPerMm.toFixed(4)} V/mm`,
+            r: `${REF.slopeVPerMm.toFixed(2)} V/mm (${pctDelta(slopeVPerMm, REF.slopeVPerMm)})`,
+          },
+          {
+            k: "Output pole",
+            c: `${centered.fPoleHz.toFixed(3)} Hz`,
+            r: `${REF.poleHz.toFixed(0)} Hz (${pctDelta(centered.fPoleHz, REF.poleHz)})`,
+          },
+        ];
+
+        validationRowsEl.innerHTML = rows.map((row) => `
+          <div class="row">
+            <div>${escapeHtml(row.k)}</div>
+            <div>${escapeHtml(row.c)}</div>
+            <div>${escapeHtml(row.r)}</div>
+          </div>`).join("");
+      }
+
+      function drawChart(canvas, xVals, yVals, cfg) {
+        const ctx = canvas.getContext("2d");
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = canvas.clientWidth;
+        const cssH = canvas.clientHeight;
+        canvas.width = Math.max(1, Math.floor(cssW * dpr));
+        canvas.height = Math.max(1, Math.floor(cssH * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const w = cssW;
+        const h = cssH;
+        ctx.clearRect(0, 0, w, h);
+
+        const padL = 72;
+        const padR = 16;
+        const padT = 12;
+        const padB = 38;
+
+        const plotW = Math.max(20, w - padL - padR);
+        const plotH = Math.max(20, h - padT - padB);
+
+        const finiteY = yVals.filter(Number.isFinite);
+        let yMin = finiteY.length ? Math.min(...finiteY) : -1;
+        let yMax = finiteY.length ? Math.max(...finiteY) : 1;
+        if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) {
+          yMin = -1;
+          yMax = 1;
+        }
+        if (Math.abs(yMax - yMin) < 1e-15) {
+          const bump = Math.max(Math.abs(yMax) * 0.05, 1e-6);
+          yMin -= bump;
+          yMax += bump;
+        }
+        const yPad = 0.08 * (yMax - yMin);
+        yMin -= yPad;
+        yMax += yPad;
+
+        let xMin = Math.min(...xVals);
+        let xMax = Math.max(...xVals);
+        if (cfg.xLog) {
+          xMin = Math.max(xMin, 1e-12);
+          xMax = Math.max(xMax, xMin * 1.0001);
+        } else if (Math.abs(xMax - xMin) < 1e-15) {
+          xMax = xMin + 1;
+        }
+
+        const xToPx = (x) => {
+          if (cfg.xLog) {
+            const lx = Math.log10(Math.max(x, xMin));
+            const lmin = Math.log10(xMin);
+            const lmax = Math.log10(xMax);
+            return padL + ((lx - lmin) / (lmax - lmin)) * plotW;
+          }
+          return padL + ((x - xMin) / (xMax - xMin)) * plotW;
+        };
+
+        const yToPx = (y) => padT + ((yMax - y) / (yMax - yMin)) * plotH;
+
+        ctx.strokeStyle = "#deceb7";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.rect(padL, padT, plotW, plotH);
+        ctx.stroke();
+
+        ctx.font = "11px Menlo, Consolas, monospace";
+        ctx.fillStyle = "#5f7280";
+
+        const yTicks = 5;
+        for (let i = 0; i <= yTicks; i++) {
+          const y = yMin + (i / yTicks) * (yMax - yMin);
+          const py = yToPx(y);
+          ctx.strokeStyle = "#efe2cf";
+          ctx.beginPath();
+          ctx.moveTo(padL, py);
+          ctx.lineTo(padL + plotW, py);
+          ctx.stroke();
+          ctx.fillText(shortFloat(y), 4, py + 4);
+        }
+
+        const xTicks = cfg.xLog ? buildLogTicks(xMin, xMax) : buildLinearTicks(xMin, xMax, 6);
+        for (const x of xTicks) {
+          const px = xToPx(x);
+          ctx.strokeStyle = "#f1e6d6";
+          ctx.beginPath();
+          ctx.moveTo(px, padT);
+          ctx.lineTo(px, padT + plotH);
+          ctx.stroke();
+          ctx.fillStyle = "#5f7280";
+          ctx.fillText(cfg.xLog ? shortHz(x) : shortFloat(x), px - 16, padT + plotH + 16);
+        }
+
+        ctx.strokeStyle = cfg.lineColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let moved = false;
+        for (let i = 0; i < xVals.length; i++) {
+          const x = xVals[i];
+          const y = yVals[i];
+          if (!Number.isFinite(y)) continue;
+          const px = xToPx(x);
+          const py = yToPx(y);
+          if (!moved) {
+            ctx.moveTo(px, py);
+            moved = true;
+          } else {
+            ctx.lineTo(px, py);
+          }
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = "#34495b";
+        ctx.font = "12px Menlo, Consolas, monospace";
+        ctx.fillText(cfg.titleX, padL + plotW / 2 - 44, h - 8);
+
+        ctx.save();
+        ctx.translate(14, padT + plotH / 2 + 30);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(cfg.titleY, 0, 0);
+        ctx.restore();
+      }
+
+      function buildLinearTicks(min, max, target) {
+        if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return [min, max];
+        const ticks = [];
+        for (let i = 0; i <= target; i++) {
+          ticks.push(min + (i / target) * (max - min));
+        }
+        return ticks;
+      }
+
+      function buildLogTicks(min, max) {
+        const ticks = [];
+        const p0 = Math.floor(Math.log10(min));
+        const p1 = Math.ceil(Math.log10(max));
+        for (let p = p0; p <= p1; p++) {
+          const v = 10 ** p;
+          if (v >= min && v <= max) ticks.push(v);
+        }
+        if (!ticks.includes(min)) ticks.unshift(min);
+        if (!ticks.includes(max)) ticks.push(max);
+        return ticks;
+      }
+
+      function logSpace(min, max, points) {
+        const out = [];
+        const lmin = Math.log(min);
+        const lmax = Math.log(max);
+        for (let i = 0; i < points; i++) {
+          const t = i / (points - 1);
+          out.push(Math.exp(lmin + t * (lmax - lmin)));
+        }
+        return out;
+      }
+
+      function clamp(v, lo, hi) {
+        return Math.min(hi, Math.max(lo, v));
+      }
+
+      function toNum(v, fallback) {
+        const x = Number(v);
+        return Number.isFinite(x) ? x : fallback;
+      }
+
+      function toPos(v, fallback) {
+        const x = Number(v);
+        return Number.isFinite(x) && x > 0 ? x : fallback;
+      }
+
+      function shortFloat(v) {
+        const a = Math.abs(v);
+        if (a >= 1e4 || (a > 0 && a < 1e-3)) return v.toExponential(2);
+        return v.toFixed(3).replace(/\.0+$/, "").replace(/(\.[0-9]*?)0+$/, "$1");
+      }
+
+      function shortHz(v) {
+        if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+        if (v >= 1e3) return `${(v / 1e3).toFixed(1)}k`;
+        return shortFloat(v);
+      }
+
+      function fmtCap(f) {
+        const a = Math.abs(f);
+        if (a >= 1e-6) return `${shortFloat(f * 1e6)} µF`;
+        if (a >= 1e-9) return `${shortFloat(f * 1e9)} nF`;
+        return `${shortFloat(f * 1e12)} pF`;
+      }
+
+      function fmtCharge(c) {
+        const a = Math.abs(c);
+        if (a >= 1e-6) return `${shortFloat(c * 1e6)} µC`;
+        if (a >= 1e-9) return `${shortFloat(c * 1e9)} nC`;
+        if (a >= 1e-12) return `${shortFloat(c * 1e12)} pC`;
+        return `${shortFloat(c)} C`;
+      }
+
+      function fmtVolt(v) {
+        const a = Math.abs(v);
+        if (a >= 1) return `${shortFloat(v)} V`;
+        if (a >= 1e-3) return `${shortFloat(v * 1e3)} mV`;
+        return `${shortFloat(v * 1e6)} µV`;
+      }
+
+      function fmtHz(v) {
+        if (v >= 1e6) return `${(v / 1e6).toFixed(3)} MHz`;
+        if (v >= 1e3) return `${(v / 1e3).toFixed(3)} kHz`;
+        return `${shortFloat(v)} Hz`;
+      }
+
+      function fmtSec(v) {
+        const a = Math.abs(v);
+        if (a >= 1) return `${shortFloat(v)} s`;
+        if (a >= 1e-3) return `${shortFloat(v * 1e3)} ms`;
+        if (a >= 1e-6) return `${shortFloat(v * 1e6)} µs`;
+        return `${shortFloat(v * 1e9)} ns`;
+      }
+
+      function fmtOhm(v) {
+        if (v >= 1e6) return `${shortFloat(v / 1e6)} MΩ`;
+        if (v >= 1e3) return `${shortFloat(v / 1e3)} kΩ`;
+        return `${shortFloat(v)} Ω`;
+      }
+
+      function updatePlateAreaInfo() {
+        const widthCm = toPos(el.widthCm.value, defaults.widthCm);
+        const heightCm = toPos(el.heightCm.value, defaults.heightCm);
+        const areaCm2 = widthCm * heightCm;
+        if (el.plateAreaInfo) {
+          el.plateAreaInfo.value = shortFloat(areaCm2);
+        }
+      }
+
+      function totalGapMmFromInput() {
+        const totalGapMm = toPos(el.totalGapMm.value, defaults.totalGapMm);
+        return totalGapMm;
+      }
+
+      function positionToOffsetMm(position) {
+        return (position - 0.5) * totalGapMmFromInput();
+      }
+
+      function offsetMmToPosition(offsetMm) {
+        const totalGapMm = totalGapMmFromInput();
+        if (totalGapMm <= 0) return 0.5;
+        return clamp(0.5 + (offsetMm / totalGapMm), 0, 1);
+      }
+
+      function syncPositionDisplays() {
+        const p = clamp(toNum(el.position.value, defaults.position), 0, 1);
+        if (el.positionText) {
+          el.positionText.value = p.toFixed(3);
+        }
+        if (el.positionOffsetMm) {
+          el.positionOffsetMm.value = shortFloat(positionToOffsetMm(p));
+        }
+      }
+
+      function syncSliderFromOffsetInput() {
+        const raw = Number(el.positionOffsetMm.value);
+        if (!Number.isFinite(raw)) return;
+        const p = offsetMmToPosition(raw);
+        el.position.value = String(p);
+        syncPositionDisplays();
+      }
+
+      function pctDelta(calc, ref) {
+        if (!Number.isFinite(calc) || !Number.isFinite(ref) || ref === 0) return "n/a";
+        const d = ((calc - ref) / ref) * 100;
+        const s = d >= 0 ? "+" : "";
+        return `${s}${d.toFixed(2)}%`;
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function bindEvents() {
+        const list = Object.entries(el).filter(([, node]) => Boolean(node));
+        for (const [id, node] of list) {
+          if (id === "positionText" || id === "plateAreaInfo") continue;
+
+          node.addEventListener("input", () => {
+            if (id === "position") {
+              syncPositionDisplays();
+            } else if (id === "positionOffsetMm") {
+              syncSliderFromOffsetInput();
+            } else if (id === "totalGapMm") {
+              syncPositionDisplays();
+            }
+            run();
+          });
+
+          if (node.type !== "range") {
+            node.addEventListener("change", () => {
+              if (id === "positionOffsetMm") {
+                syncSliderFromOffsetInput();
+              } else if (id === "totalGapMm") {
+                syncPositionDisplays();
+              }
+              run();
+            });
+          }
+        }
+        window.addEventListener("resize", run);
+      }
+
+      setDefaults();
+      bindEvents();
+      run();
+    })();
+  </script>
+</body>
+</html>
