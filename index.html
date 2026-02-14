@@ -474,13 +474,12 @@
             <code>dLeft = max(minGap, p·G)</code>, <code>dRight = max(minGap, (1-p)·G)</code>.
           </p>
           <p>
-            Per-cycle charge model:
+            Bidirectional switched-cap model:
             <code>Q_packet = 2·Vpeak·(Ca-Cb)</code>,
-            <code>Q_to_C4 = Q_packet·C3/(C3+C4)</code>,
-            <code>R_eq = user-defined output load</code>,
-            <code>α = exp(-T/(R_eq·C4))</code>,
-            <code>Vout[n+1]=α·Vout[n]+Q_to_C4/C4</code>,
-            and steady-state <code>Vout = (Q_to_C4/C4)/(1-α)</code> with polarity mapped so rightward motion is positive.
+            then each cycle applies sensor injection on <code>C3</code>, bidirectional charge sharing between
+            <code>C3</code> and <code>C4</code>, and output leakage via <code>R_eq</code>.
+            Periodic steady-state is solved iteratively from <code>x[n+1]=F(x[n])</code>.
+            Polarity is mapped so rightward motion is positive.
           </p>
           <p>
             Simplifications: front-end only (no U1A/integrator/coil loop), no fringing, no plate-thickness effects,
@@ -499,6 +498,14 @@
         slopeVPerMm: 1.25,
         poleHz: 306,
       };
+      const SOLVER = {
+        tolV: 1e-9,
+        maxIter: 2000,
+        transferGain: 1.0,
+        useOutputClamp: true,
+        clampMinV: -12,
+        clampMaxV: 12,
+      };
 
       /** @typedef {{
        * widthCm:number,heightCm:number,totalGapMm:number,position:number,freqHz:number,
@@ -515,7 +522,9 @@
        * caF:number,cbF:number,deltaCF:number,qPacketC:number,qToC4C:number,
        * vOutSteadyV:number,tauOutS:number,fPoleHz:number,warnings:string[],
        * dLeftM:number,dRightM:number,alpha:number,rEqOhm:number,
-       * tauAS:number,tauBS:number,fWarningThresholdHz:number
+       * tauAS:number,tauBS:number,fWarningThresholdHz:number,
+       * solverIterations:number,solverResidualV:number,solverConverged:boolean,
+       * v3SteadyV:number,qTransferCycleC:number
        * }} SimulationResult */
 
       const defaults = {
@@ -615,8 +624,65 @@
         return { inputs, sweep };
       }
 
+      function cycleStep(state, derived) {
+        const {
+          c3F, c4F, cSensorEqF, qPacketOpenC, alpha, transferGain,
+          useClamp, clampMinV, clampMaxV
+        } = derived;
+
+        // Phase A: sensor-induced packet into C3 with back-reaction term.
+        const qSensorC = qPacketOpenC - cSensorEqF * state.v3;
+        const v3A = state.v3 + qSensorC / c3F;
+        const v4A = state.v4;
+
+        // Phase B: charge sharing between C3 and C4. Bidirectional by sign of (V3 - V4).
+        const cEqF = (c3F * c4F) / Math.max(c3F + c4F, 1e-18);
+        const qTransferC = transferGain * cEqF * (v3A - v4A);
+        const v3B = v3A - qTransferC / c3F;
+        let v4B = v4A + qTransferC / c4F;
+
+        // Output leakage over one cycle.
+        v4B *= alpha;
+
+        if (useClamp) {
+          v4B = clamp(v4B, clampMinV, clampMaxV);
+        }
+
+        return {
+          state: { v3: v3B, v4: v4B },
+          qSensorC,
+          qTransferC,
+        };
+      }
+
+      function solvePeriodicSteadyState(derived, initialState) {
+        let state = initialState
+          ? { v3: initialState.v3, v4: initialState.v4 }
+          : { v3: 0, v4: 0 };
+        let residualV = Infinity;
+        let iterations = 0;
+        let qSensorC = 0;
+        let qTransferC = 0;
+
+        for (let i = 0; i < SOLVER.maxIter; i++) {
+          const prevV3 = state.v3;
+          const prevV4 = state.v4;
+          const step = cycleStep(state, derived);
+          state = step.state;
+          qSensorC = step.qSensorC;
+          qTransferC = step.qTransferC;
+          residualV = Math.max(Math.abs(state.v3 - prevV3), Math.abs(state.v4 - prevV4));
+          iterations = i + 1;
+          if (residualV < SOLVER.tolV) {
+            return { converged: true, iterations, residualV, state, qSensorC, qTransferC };
+          }
+        }
+
+        return { converged: false, iterations, residualV, state, qSensorC, qTransferC };
+      }
+
       /** @param {SimulationInputs} p */
-      function simulate(p) {
+      function simulateWithState(p, initialState) {
         const warnings = [];
         const areaM2 = (p.widthCm * 1e-2) * (p.heightCm * 1e-2);
         const totalGapM = p.totalGapMm * 1e-3;
@@ -630,20 +696,28 @@
         const deltaCF = caF - cbF;
 
         const qPacketC = 2 * p.vDrivePeakV * deltaCF;
-        const cSum = Math.max(p.c3F + p.c4F, 1e-18);
-        const qToC4C = qPacketC * (p.c3F / cSum);
 
         const rEqOhm = Math.max(p.rEqOhm, 1e-18);
         const tauOutS = Math.max(rEqOhm * p.c4F, 1e-18);
 
         const T = 1 / Math.max(p.freqHz, 1e-12);
         const alpha = Math.exp(-T / tauOutS);
-        const denom = Math.max(1 - alpha, 1e-15);
-        const vStep = qToC4C / Math.max(p.c4F, 1e-18);
+        const cSensorEqF = Math.max(caF + cbF + p.ccF, 1e-18);
+        const solver = solvePeriodicSteadyState({
+          c3F: Math.max(p.c3F, 1e-18),
+          c4F: Math.max(p.c4F, 1e-18),
+          cSensorEqF,
+          qPacketOpenC: qPacketC,
+          alpha,
+          transferGain: SOLVER.transferGain,
+          useClamp: SOLVER.useOutputClamp,
+          clampMinV: SOLVER.clampMinV,
+          clampMaxV: SOLVER.clampMaxV,
+        }, initialState);
 
-        const vOutRaw = vStep / denom;
         // Mapping output polarity so position increase (right shift) is positive.
-        const vOutSteadyV = -vOutRaw;
+        const vOutSteadyV = -solver.state.v4;
+        const qToC4C = solver.qTransferC;
 
         const fPoleHz = 1 / (2 * Math.PI * tauOutS);
 
@@ -656,11 +730,23 @@
           warnings.push("Full-charge assumption may be invalid at this frequency.");
         }
 
+        if (!solver.converged) {
+          warnings.push("Steady-state solver did not converge; result may be approximate.");
+        }
+
+        if (SOLVER.useOutputClamp) {
+          const nearMin = Math.abs(solver.state.v4 - SOLVER.clampMinV) < 1e-6;
+          const nearMax = Math.abs(solver.state.v4 - SOLVER.clampMaxV) < 1e-6;
+          if (nearMin || nearMax) {
+            warnings.push("Output clamp is active; saturation limits reached.");
+          }
+        }
+
         if (!Number.isFinite(vOutSteadyV)) {
           warnings.push("Numeric instability detected; check parameter ranges.");
         }
 
-        return {
+        const result = {
           caF,
           cbF,
           deltaCF,
@@ -677,20 +763,32 @@
           tauAS: tauA,
           tauBS: tauB,
           fWarningThresholdHz,
+          solverIterations: solver.iterations,
+          solverResidualV: solver.residualV,
+          solverConverged: solver.converged,
+          v3SteadyV: solver.state.v3,
+          qTransferCycleC: solver.qTransferC,
         };
+        return { result, state: solver.state };
+      }
+
+      /** @param {SimulationInputs} p */
+      function simulate(p) {
+        return simulateWithState(p, null).result;
       }
 
       function run() {
         const { inputs, sweep } = readInputs();
         syncPositionDisplays();
         updatePlateAreaInfo();
-        const res = simulate(inputs);
+        const op = simulateWithState(inputs, null);
+        const res = op.result;
         renderMetrics(inputs, res);
         renderValidation(inputs);
 
-        const freqData = sweepFrequency(inputs, sweep);
-        const posData = sweepPosition(inputs, sweep);
-        const gapData = sweepGap(inputs, sweep);
+        const freqData = sweepFrequency(inputs, sweep, op.state);
+        const posData = sweepPosition(inputs, sweep, op.state);
+        const gapData = sweepGap(inputs, sweep, op.state);
 
         drawChart(canvases.freq, freqData.x, freqData.y, {
           titleX: "Frequency (Hz)",
@@ -712,32 +810,44 @@
         });
       }
 
-      function sweepFrequency(base, sweep) {
+      function sweepFrequency(base, sweep, seedState) {
         const x = logSpace(sweep.freqMinHz, sweep.freqMaxHz, sweep.freqPoints);
-        const y = x.map((f) => simulate({ ...base, freqHz: f }).vOutSteadyV);
-        return { x, y };
-      }
-
-      function sweepPosition(base, sweep) {
-        const n = sweep.positionPoints;
-        const x = [];
         const y = [];
-        for (let i = 0; i < n; i++) {
-          const p = i / (n - 1);
-          x.push(p);
-          y.push(simulate({ ...base, position: p }).vOutSteadyV);
+        let state = seedState ? { ...seedState } : null;
+        for (const f of x) {
+          const solved = simulateWithState({ ...base, freqHz: f }, state);
+          y.push(solved.result.vOutSteadyV);
+          state = solved.state;
         }
         return { x, y };
       }
 
-      function sweepGap(base, sweep) {
+      function sweepPosition(base, sweep, seedState) {
+        const n = sweep.positionPoints;
+        const x = [];
+        const y = [];
+        let state = seedState ? { ...seedState } : null;
+        for (let i = 0; i < n; i++) {
+          const p = i / (n - 1);
+          x.push(p);
+          const solved = simulateWithState({ ...base, position: p }, state);
+          y.push(solved.result.vOutSteadyV);
+          state = solved.state;
+        }
+        return { x, y };
+      }
+
+      function sweepGap(base, sweep, seedState) {
         const n = sweep.gapPoints;
         const x = [];
         const y = [];
+        let state = seedState ? { ...seedState } : null;
         for (let i = 0; i < n; i++) {
           const g = sweep.gapMinMm + (i / (n - 1)) * (sweep.gapMaxMm - sweep.gapMinMm);
           x.push(g);
-          y.push(simulate({ ...base, totalGapMm: g }).vOutSteadyV);
+          const solved = simulateWithState({ ...base, totalGapMm: g }, state);
+          y.push(solved.result.vOutSteadyV);
+          state = solved.state;
         }
         return { x, y };
       }
@@ -747,8 +857,8 @@
           ["Ca", fmtCap(res.caF)],
           ["Cb", fmtCap(res.cbF)],
           ["ΔC = Ca-Cb", fmtCap(res.deltaCF)],
-          ["Q_packet", fmtCharge(res.qPacketC)],
-          ["Q_to_C4", fmtCharge(res.qToC4C)],
+          ["Q_packet (open-loop)", fmtCharge(res.qPacketC)],
+          ["Q_transfer/cycle (signed)", fmtCharge(res.qToC4C)],
           ["Vout steady", fmtVolt(res.vOutSteadyV)],
           ["Output pole f", fmtHz(res.fPoleHz)],
           ["τ_out", fmtSec(res.tauOutS)],
@@ -758,6 +868,10 @@
           ["R_eq (used)", fmtOhm(res.rEqOhm)],
           ["Left gap dL", `${(res.dLeftM * 1e3).toFixed(4)} mm`],
           ["Right gap dR", `${(res.dRightM * 1e3).toFixed(4)} mm`],
+          ["V3 steady (internal)", fmtVolt(res.v3SteadyV)],
+          ["Solver iterations", String(res.solverIterations)],
+          ["Solver residual", fmtVolt(res.solverResidualV)],
+          ["Solver converged", res.solverConverged ? "yes" : "no"],
           ["α", res.alpha.toFixed(6)],
         ];
 
