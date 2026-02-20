@@ -1,44 +1,46 @@
+import Chart from "chart.js/auto";
 import { shortFloat, shortHz } from "./format.js";
 
-export function drawChart(canvas, xVals, yVals, cfg) {
-  const ctx = canvas.getContext("2d");
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth;
-  const cssH = canvas.clientHeight;
-  canvas.width = Math.max(1, Math.floor(cssW * dpr));
-  canvas.height = Math.max(1, Math.floor(cssH * dpr));
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+const chartsByCanvas = new WeakMap();
 
-  const w = cssW;
-  const h = cssH;
-
-  // Dark background fill
-  ctx.fillStyle = "#0c1117";
-  ctx.fillRect(0, 0, w, h);
-
-  if (!Array.isArray(xVals) || !Array.isArray(yVals) || xVals.length === 0 || yVals.length === 0) {
+const noDataPlugin = {
+  id: "noDataLabel",
+  afterDraw(chart, _args, opts) {
+    if (!opts?.enabled) return;
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    ctx.save();
     ctx.fillStyle = "#4a5a68";
     ctx.font = "13px 'JetBrains Mono', Menlo, Consolas, monospace";
-    ctx.fillText("No data", 14, 24);
-    return;
+    ctx.fillText("No data", chartArea.left + 8, chartArea.top + 18);
+    ctx.restore();
+  },
+};
+Chart.register(noDataPlugin);
+
+function toPoints(xVals, yVals, xLog) {
+  if (!Array.isArray(xVals) || !Array.isArray(yVals)) return [];
+  const n = Math.min(xVals.length, yVals.length);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const x = Number(xVals[i]);
+    const y = Number(yVals[i]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (xLog && x <= 0) continue;
+    out.push({ x, y });
   }
+  return out;
+}
 
-  const padL = 72;
-  const padR = 16;
-  const padT = 12;
-  const padB = 38;
+function paddedYBounds(primaryPoints, secondaryPoints) {
+  const values = [];
+  for (const pt of primaryPoints) values.push(pt.y);
+  for (const pt of secondaryPoints) values.push(pt.y);
 
-  const plotW = Math.max(20, w - padL - padR);
-  const plotH = Math.max(20, h - padT - padB);
-
-  const ySeries = [yVals];
-  if (Array.isArray(cfg.secondaryY)) ySeries.push(cfg.secondaryY);
-  const finiteY = ySeries.flat().filter(Number.isFinite);
-  let yMin = finiteY.length ? Math.min(...finiteY) : -1;
-  let yMax = finiteY.length ? Math.max(...finiteY) : 1;
+  let yMin = values.length ? Math.min(...values) : -1;
+  let yMax = values.length ? Math.max(...values) : 1;
   if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) {
-    yMin = -1;
-    yMax = 1;
+    return { min: -1, max: 1 };
   }
   if (Math.abs(yMax - yMin) < 1e-15) {
     const bump = Math.max(Math.abs(yMax) * 0.05, 1e-6);
@@ -46,171 +48,183 @@ export function drawChart(canvas, xVals, yVals, cfg) {
     yMax += bump;
   }
   const yPad = 0.08 * (yMax - yMin);
-  yMin -= yPad;
-  yMax += yPad;
+  return { min: yMin - yPad, max: yMax + yPad };
+}
 
-  let xMin = Math.min(...xVals);
-  let xMax = Math.max(...xVals);
-  if (cfg.xLog) {
-    xMin = Math.max(xMin, 1e-12);
-    xMax = Math.max(xMax, xMin * 1.0001);
-  } else if (Math.abs(xMax - xMin) < 1e-15) {
-    xMax = xMin + 1;
+function xBounds(points) {
+  if (!points.length) return null;
+  let min = points[0].x;
+  let max = points[0].x;
+  for (let i = 1; i < points.length; i++) {
+    const x = points[i].x;
+    if (x < min) min = x;
+    if (x > max) max = x;
+  }
+  return { min, max };
+}
+
+export function drawChart(canvas, xVals, yVals, cfg) {
+  if (!canvas) return;
+
+  const primaryPoints = toPoints(xVals, yVals, Boolean(cfg.xLog));
+  const secondaryPoints = Array.isArray(cfg.secondaryY)
+    ? toPoints(xVals, cfg.secondaryY, Boolean(cfg.xLog))
+    : [];
+  const bounds = paddedYBounds(primaryPoints, secondaryPoints);
+  const combinedX = xBounds([...primaryPoints, ...secondaryPoints]);
+
+  const datasets = [
+    {
+      label: cfg.lineLabel || "primary",
+      data: primaryPoints,
+      borderColor: cfg.lineColor || "#00e68a",
+      backgroundColor: cfg.lineColor || "#00e68a",
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      tension: 0,
+      spanGaps: true,
+    },
+  ];
+
+  if (secondaryPoints.length || Array.isArray(cfg.secondaryY)) {
+    datasets.push({
+      label: cfg.secondaryLabel || "secondary",
+      data: secondaryPoints,
+      borderColor: cfg.secondaryColor || "#ffb347",
+      backgroundColor: cfg.secondaryColor || "#ffb347",
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      tension: 0,
+      spanGaps: true,
+    });
   }
 
-  const xToPx = (x) => {
-    if (cfg.xLog) {
-      const lx = Math.log10(Math.max(x, xMin));
-      const lmin = Math.log10(xMin);
-      const lmax = Math.log10(xMax);
-      return padL + ((lx - lmin) / (lmax - lmin)) * plotW;
-    }
-    return padL + ((x - xMin) / (xMax - xMin)) * plotW;
+  const hasNamedLegend = Boolean(cfg.lineLabel || cfg.secondaryLabel);
+  const chartConfig = {
+    type: "line",
+    data: { datasets },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      parsing: false,
+      normalized: true,
+      interaction: {
+        mode: "nearest",
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          display: hasNamedLegend,
+          labels: {
+            color: "#6b7f8e",
+            boxWidth: 12,
+            boxHeight: 2,
+            font: {
+              family: "'JetBrains Mono', Menlo, Consolas, monospace",
+              size: 11,
+            },
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title(items) {
+              const x = items?.[0]?.parsed?.x;
+              if (!Number.isFinite(x)) return "";
+              return cfg.xLog ? shortHz(x) : shortFloat(x);
+            },
+            label(item) {
+              const value = item?.parsed?.y;
+              if (!Number.isFinite(value)) return "";
+              return `${item.dataset.label}: ${shortFloat(value)}`;
+            },
+          },
+        },
+        noDataLabel: {
+          enabled: primaryPoints.length === 0 && secondaryPoints.length === 0,
+        },
+      },
+      scales: {
+        x: {
+          type: cfg.xLog ? "logarithmic" : "linear",
+          min: combinedX?.min,
+          max: combinedX?.max,
+          title: {
+            display: true,
+            text: cfg.titleX || "",
+            color: "#5a6e7e",
+            font: {
+              family: "'DM Sans', system-ui, sans-serif",
+              size: 11,
+            },
+          },
+          ticks: {
+            color: "#4a5a68",
+            maxTicksLimit: cfg.xLog ? 7 : 6,
+            callback(value) {
+              const v = Number(value);
+              return cfg.xLog ? shortHz(v) : shortFloat(v);
+            },
+            font: {
+              family: "'JetBrains Mono', Menlo, Consolas, monospace",
+              size: 11,
+            },
+          },
+          border: {
+            color: "#243040",
+          },
+          grid: {
+            color: "#1a2430",
+          },
+        },
+        y: {
+          type: "linear",
+          min: bounds.min,
+          max: bounds.max,
+          title: {
+            display: true,
+            text: cfg.titleY || "",
+            color: "#5a6e7e",
+            font: {
+              family: "'DM Sans', system-ui, sans-serif",
+              size: 11,
+            },
+          },
+          ticks: {
+            color: "#4a5a68",
+            callback(value) {
+              return shortFloat(Number(value));
+            },
+            font: {
+              family: "'JetBrains Mono', Menlo, Consolas, monospace",
+              size: 11,
+            },
+          },
+          border: {
+            color: "#243040",
+          },
+          grid: {
+            color: "#1a2430",
+          },
+        },
+      },
+    },
   };
 
-  const yToPx = (y) => padT + ((yMax - y) / (yMax - yMin)) * plotH;
-
-  // Plot area border
-  ctx.strokeStyle = "#243040";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.rect(padL, padT, plotW, plotH);
-  ctx.stroke();
-
-  // Axis labels and grid
-  ctx.font = "11px 'JetBrains Mono', Menlo, Consolas, monospace";
-  ctx.fillStyle = "#4a5a68";
-
-  // Y-axis gridlines and labels
-  const yTicks = 5;
-  for (let i = 0; i <= yTicks; i++) {
-    const y = yMin + (i / yTicks) * (yMax - yMin);
-    const py = yToPx(y);
-    ctx.strokeStyle = "#1a2430";
-    ctx.beginPath();
-    ctx.moveTo(padL, py);
-    ctx.lineTo(padL + plotW, py);
-    ctx.stroke();
-    ctx.fillStyle = "#4a5a68";
-    ctx.fillText(shortFloat(y), 4, py + 4);
+  const existing = chartsByCanvas.get(canvas);
+  if (existing) {
+    existing.config.data = chartConfig.data;
+    existing.config.options = chartConfig.options;
+    existing.update("none");
+    return;
   }
 
-  // X-axis gridlines and labels
-  const xTicks = cfg.xLog ? buildLogTicks(xMin, xMax) : buildLinearTicks(xMin, xMax, 6);
-  for (const x of xTicks) {
-    const px = xToPx(x);
-    ctx.strokeStyle = "#1a2430";
-    ctx.beginPath();
-    ctx.moveTo(px, padT);
-    ctx.lineTo(px, padT + plotH);
-    ctx.stroke();
-    ctx.fillStyle = "#4a5a68";
-    ctx.fillText(cfg.xLog ? shortHz(x) : shortFloat(x), px - 16, padT + plotH + 16);
-  }
-
-  // Primary trace with glow effect
-  ctx.save();
-  ctx.shadowColor = cfg.lineColor;
-  ctx.shadowBlur = 6;
-  ctx.strokeStyle = cfg.lineColor;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  let moved = false;
-  for (let i = 0; i < xVals.length; i++) {
-    const x = xVals[i];
-    const y = yVals[i];
-    if (!Number.isFinite(y)) continue;
-    const px = xToPx(x);
-    const py = yToPx(y);
-    if (!moved) {
-      ctx.moveTo(px, py);
-      moved = true;
-    } else {
-      ctx.lineTo(px, py);
-    }
-  }
-  ctx.stroke();
-  ctx.restore();
-
-  // Secondary trace with glow effect
-  if (Array.isArray(cfg.secondaryY)) {
-    ctx.save();
-    const secColor = cfg.secondaryColor || "#ffb347";
-    ctx.shadowColor = secColor;
-    ctx.shadowBlur = 6;
-    ctx.strokeStyle = secColor;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    moved = false;
-    const n = Math.min(xVals.length, cfg.secondaryY.length);
-    for (let i = 0; i < n; i++) {
-      const y = cfg.secondaryY[i];
-      if (!Number.isFinite(y)) continue;
-      const px = xToPx(xVals[i]);
-      const py = yToPx(y);
-      if (!moved) {
-        ctx.moveTo(px, py);
-        moved = true;
-      } else {
-        ctx.lineTo(px, py);
-      }
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Axis titles
-  ctx.fillStyle = "#5a6e7e";
-  ctx.font = "11px 'DM Sans', system-ui, sans-serif";
-  ctx.fillText(cfg.titleX, padL + plotW / 2 - 44, h - 8);
-
-  ctx.save();
-  ctx.translate(14, padT + plotH / 2 + 30);
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText(cfg.titleY, 0, 0);
-  ctx.restore();
-
-  // Legend
-  if (cfg.lineLabel || cfg.secondaryLabel) {
-    const legendY = padT + 12;
-    let legendX = padL + plotW - 130;
-    if (cfg.lineLabel) {
-      ctx.fillStyle = cfg.lineColor;
-      ctx.fillRect(legendX, legendY - 8, 10, 3);
-      ctx.fillStyle = "#6b7f8e";
-      ctx.font = "11px 'JetBrains Mono', Menlo, Consolas, monospace";
-      ctx.fillText(cfg.lineLabel, legendX + 14, legendY);
-      legendX += 56;
-    }
-    if (cfg.secondaryLabel) {
-      ctx.fillStyle = cfg.secondaryColor || "#ffb347";
-      ctx.fillRect(legendX, legendY - 8, 10, 3);
-      ctx.fillStyle = "#6b7f8e";
-      ctx.fillText(cfg.secondaryLabel, legendX + 14, legendY);
-    }
-  }
-}
-
-function buildLinearTicks(min, max, target) {
-  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return [min, max];
-  const ticks = [];
-  for (let i = 0; i <= target; i++) {
-    ticks.push(min + (i / target) * (max - min));
-  }
-  return ticks;
-}
-
-function buildLogTicks(min, max) {
-  const ticks = [];
-  const p0 = Math.floor(Math.log10(min));
-  const p1 = Math.ceil(Math.log10(max));
-  for (let p = p0; p <= p1; p++) {
-    const v = 10 ** p;
-    if (v >= min && v <= max) ticks.push(v);
-  }
-  if (!ticks.includes(min)) ticks.unshift(min);
-  if (!ticks.includes(max)) ticks.push(max);
-  return ticks;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const chart = new Chart(ctx, chartConfig);
+  chartsByCanvas.set(canvas, chart);
 }
 
 export function logSpace(min, max, points) {
