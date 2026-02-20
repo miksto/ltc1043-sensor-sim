@@ -1,4 +1,4 @@
-import { DEFAULT_SOLVER } from "../simulator-core.mjs";
+import { DEFAULT_INPUTS, DEFAULT_SOLVER } from "../simulator-core.mjs";
 
 export const REF = {
   centeredCapPF: 48.2,
@@ -10,22 +10,22 @@ export const SOLVER = { ...DEFAULT_SOLVER };
 export const POSITION_SWEEP_CENTER_TRAVEL_FRACTION = 0.8;
 
 export const DEFAULTS = {
-  widthCm: Math.sqrt(43.5),
-  heightCm: Math.sqrt(43.5),
-  totalGapMm: 1.58,
+  widthCm: DEFAULT_INPUTS.widthCm,
+  heightCm: DEFAULT_INPUTS.heightCm,
+  totalGapMm: DEFAULT_INPUTS.totalGapMm,
   position: 0.5,
   positionOffsetMm: 0,
   residualScale: "linear",
-  freqHz: 62500,
-  vDrivePeakV: 5,
-  r10Ohm: 10000,
-  r11Ohm: 10000,
-  iBiasPA: 50,
-  c3F: 4700,
-  c4F: 4700,
-  ccF: 10,
-  epsilonR: 1.0006,
-  minGapMm: 0.05,
+  freqHz: DEFAULT_INPUTS.freqHz,
+  vDrivePeakV: DEFAULT_INPUTS.vDrivePeakV,
+  r10Ohm: DEFAULT_INPUTS.r10Ohm,
+  r11Ohm: DEFAULT_INPUTS.r11Ohm,
+  iBiasPA: DEFAULT_INPUTS.iBiasA * 1e12,
+  c3F: DEFAULT_INPUTS.c3F * 1e12,
+  c4F: DEFAULT_INPUTS.c4F * 1e12,
+  ccF: DEFAULT_INPUTS.ccF * 1e12,
+  epsilonR: DEFAULT_INPUTS.epsilonR,
+  minGapMm: DEFAULT_INPUTS.minGapMm,
   freqMinHz: 1_000,
   freqMaxHz: 500_000,
   freqPoints: 180,
