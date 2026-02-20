@@ -269,12 +269,14 @@
             each cycle samples the RC-attenuated differential sensor voltage onto <code>C3</code>, then applies charge
             sharing between <code>C3</code> and <code>C4</code>, plus an output shift from op-amp input bias current.
             The parameter <code>Cc</code> is modeled as mutual capacitance between sensor nodes A and B.
+            The sensor-node operating point (<code>Va</code>, <code>Vb</code>) is solved from a coupled RC nodal model.
             Periodic steady-state is solved iteratively from <code>x[n+1]=F(x[n])</code>.
             Polarity is mapped so rightward motion is positive.
           </p>
           <p>
             Simplifications: front-end only (no U1A/integrator/coil loop), no fringing, no plate-thickness effects,
-            full-charge assumption kept with warning when half-cycle is below <code>5·max(τA, τB)</code>, and
+            RC transients for the one-cycle sensor-node chart are integrated numerically under a ±V square-wave drive,
+            the <code>5·max(τA, τB)</code> check is a heuristic indicator only, and
             an output clamp (±12V in this model) to avoid non-physical runaway values.
           </p>
           <p>
