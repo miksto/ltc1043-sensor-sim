@@ -257,3 +257,93 @@ test('very large C4 still solves to analytic steady-state (no early tiny-step st
   assert.ok(Math.abs(r.vOutSteadyV) > 1e-9, `vout=${r.vOutSteadyV}`);
   assert.ok(near(r.vOutSteadyV, expectedVout, 1e-10), `vout=${r.vOutSteadyV}, expected=${expectedVout}`);
 });
+
+test('simulate remains permissive for malformed high-level input values', () => {
+  const r = simulate({
+    widthCm: Number.NaN,
+    heightCm: -10,
+    totalGapMm: 0,
+    minGapMm: -1,
+    position: 9,
+    freqHz: Number.NaN,
+    vDrivePeakV: Number.NaN,
+    r10Ohm: 0,
+    r11Ohm: -5,
+    iBiasA: Number.NaN,
+    c3F: 0,
+    c4F: Number.NaN,
+    ccF: -1,
+    epsilonR: 0,
+  });
+  assert.ok(Number.isFinite(r.caF));
+  assert.ok(Number.isFinite(r.cbF));
+  assert.ok(Number.isFinite(r.vOutSteadyV));
+  assert.ok(Array.isArray(r.warnings));
+});
+
+test('simulateWithState remains permissive for malformed solver and state', () => {
+  const solved = simulateWithState(
+    DEFAULT_INPUTS,
+    { v3: Number.NaN, v4: Number.POSITIVE_INFINITY },
+    {
+      tolV: -1,
+      maxIter: 0,
+      transferGain: Number.NaN,
+      useOutputClamp: "yes",
+      clampMinV: 5,
+      clampMaxV: -5,
+      collectTrace: "no",
+    },
+  );
+  assert.ok(Number.isFinite(solved.result.vOutSteadyV));
+  assert.ok(Number.isFinite(solved.result.solverResidualV));
+  assert.ok(solved.result.solverIterations > 0);
+});
+
+test('non-converged solver warning is surfaced', () => {
+  const r = simulate(
+    { ...DEFAULT_INPUTS },
+    {
+      ...DEFAULT_SOLVER,
+      transferGain: 0,
+      maxIter: 3,
+      tolV: 1e-30,
+      useOutputClamp: false,
+    },
+  );
+  assert.equal(r.solverConverged, false);
+  assert.ok(r.warnings.some((w) => w.includes('Steady-state solver did not converge')));
+});
+
+test('clamp-active warning is surfaced when output saturates', () => {
+  const r = simulate(
+    { ...DEFAULT_INPUTS, position: 0.8, iBiasA: 0 },
+    {
+      ...DEFAULT_SOLVER,
+      useOutputClamp: true,
+      clampMinV: -1e-4,
+      clampMaxV: 1e-4,
+    },
+  );
+  assert.ok(r.warnings.some((w) => w.includes('Output clamp is active')));
+});
+
+test('numeric-instability warning appears when derived terms overflow', () => {
+  const solved = simulateWithState(
+    {
+      ...DEFAULT_INPUTS,
+      iBiasA: 1e308,
+      freqHz: 1e-12,
+      c4F: 1e-18,
+      position: 0.7,
+    },
+    null,
+    {
+      ...DEFAULT_SOLVER,
+      useOutputClamp: false,
+      transferGain: 1,
+    },
+  );
+  assert.ok(!Number.isFinite(solved.result.vOutSteadyV), `vout=${solved.result.vOutSteadyV}`);
+  assert.ok(solved.result.warnings.some((w) => w.includes('Numeric instability detected')));
+});

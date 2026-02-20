@@ -1,6 +1,24 @@
 import { DEFAULT_INPUTS } from "./defaults.mjs";
 import { solveGeometry } from "./geometry.mjs";
 
+function assertFiniteNumber(name, value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new TypeError(`${name} must be a finite number`);
+  }
+}
+
+function assertPositive(name, value) {
+  if (value <= 0) {
+    throw new RangeError(`${name} must be > 0`);
+  }
+}
+
+function assertNonNegative(name, value) {
+  if (value < 0) {
+    throw new RangeError(`${name} must be >= 0`);
+  }
+}
+
 export function solveSensorNodeVoltages({
   vDrivePeakV,
   r10Ohm,
@@ -10,6 +28,21 @@ export function solveSensorNodeVoltages({
   ccF,
   omega,
 }) {
+  assertFiniteNumber("vDrivePeakV", vDrivePeakV);
+  assertFiniteNumber("r10Ohm", r10Ohm);
+  assertFiniteNumber("r11Ohm", r11Ohm);
+  assertFiniteNumber("caF", caF);
+  assertFiniteNumber("cbF", cbF);
+  assertFiniteNumber("ccF", ccF);
+  assertFiniteNumber("omega", omega);
+
+  assertPositive("r10Ohm", r10Ohm);
+  assertPositive("r11Ohm", r11Ohm);
+  assertNonNegative("caF", caF);
+  assertNonNegative("cbF", cbF);
+  assertNonNegative("ccF", ccF);
+  assertNonNegative("omega", omega);
+
   const g10 = 1 / Math.max(r10Ohm, 1e-18);
   const g11 = 1 / Math.max(r11Ohm, 1e-18);
   const k = Math.max(omega, 0) * Math.max(ccF, 0);

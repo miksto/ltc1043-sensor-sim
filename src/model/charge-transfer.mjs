@@ -4,7 +4,123 @@ export function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
 }
 
+function assertFiniteNumber(name, value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new TypeError(`${name} must be a finite number`);
+  }
+}
+
+function assertBoolean(name, value) {
+  if (typeof value !== "boolean") {
+    throw new TypeError(`${name} must be a boolean`);
+  }
+}
+
+function assertPositive(name, value) {
+  if (value <= 0) {
+    throw new RangeError(`${name} must be > 0`);
+  }
+}
+
+function assertNonNegative(name, value) {
+  if (value < 0) {
+    throw new RangeError(`${name} must be >= 0`);
+  }
+}
+
+function validateClampBounds(minV, maxV, minName, maxName) {
+  assertFiniteNumber(minName, minV);
+  assertFiniteNumber(maxName, maxV);
+  if (minV > maxV) {
+    throw new RangeError(`${minName} must be <= ${maxName}`);
+  }
+}
+
+function validateState(state, name = "state") {
+  if (!state || typeof state !== "object") {
+    throw new TypeError(`${name} must be an object`);
+  }
+  assertFiniteNumber(`${name}.v3`, state.v3);
+  assertFiniteNumber(`${name}.v4`, state.v4);
+}
+
+function validateDerived(derived) {
+  if (!derived || typeof derived !== "object") {
+    throw new TypeError("derived must be an object");
+  }
+  assertFiniteNumber("derived.c3F", derived.c3F);
+  assertFiniteNumber("derived.c4F", derived.c4F);
+  assertFiniteNumber("derived.c3SampleV", derived.c3SampleV);
+  assertFiniteNumber("derived.deltaVBiasPerCycleV", derived.deltaVBiasPerCycleV);
+  assertFiniteNumber("derived.transferGain", derived.transferGain);
+  assertBoolean("derived.useClamp", derived.useClamp);
+  assertPositive("derived.c3F", derived.c3F);
+  assertPositive("derived.c4F", derived.c4F);
+  validateClampBounds(
+    derived.clampMinV,
+    derived.clampMaxV,
+    "derived.clampMinV",
+    "derived.clampMaxV",
+  );
+}
+
+function normalizeSolver(solver) {
+  if (!solver || typeof solver !== "object") {
+    throw new TypeError("solver must be an object");
+  }
+
+  const normalized = {
+    tolV: solver.tolV,
+    maxIter: solver.maxIter,
+    transferGain: solver.transferGain,
+    useOutputClamp: solver.useOutputClamp,
+    clampMinV: solver.clampMinV,
+    clampMaxV: solver.clampMaxV,
+    collectTrace: solver.collectTrace,
+  };
+
+  assertFiniteNumber("solver.tolV", normalized.tolV);
+  assertNonNegative("solver.tolV", normalized.tolV);
+  assertFiniteNumber("solver.maxIter", normalized.maxIter);
+  if (!Number.isInteger(normalized.maxIter) || normalized.maxIter < 1) {
+    throw new RangeError("solver.maxIter must be an integer >= 1");
+  }
+  assertFiniteNumber("solver.transferGain", normalized.transferGain);
+  assertBoolean("solver.useOutputClamp", normalized.useOutputClamp);
+  assertBoolean("solver.collectTrace", normalized.collectTrace);
+  validateClampBounds(
+    normalized.clampMinV,
+    normalized.clampMaxV,
+    "solver.clampMinV",
+    "solver.clampMaxV",
+  );
+
+  return normalized;
+}
+
+function normalizeDerivedForSolver(derived, solver) {
+  if (!derived || typeof derived !== "object") {
+    throw new TypeError("derived must be an object");
+  }
+
+  const normalized = {
+    c3F: derived.c3F,
+    c4F: derived.c4F,
+    c3SampleV: derived.c3SampleV,
+    deltaVBiasPerCycleV: derived.deltaVBiasPerCycleV,
+    transferGain: solver.transferGain,
+    useClamp: solver.useOutputClamp,
+    clampMinV: solver.clampMinV,
+    clampMaxV: solver.clampMaxV,
+  };
+  validateDerived(normalized);
+  return normalized;
+}
+
 export function cycleStep(state, derived) {
+  validateState(state);
+  validateDerived(derived);
+
   const {
     c3F,
     c4F,
@@ -40,10 +156,21 @@ export function cycleStep(state, derived) {
 }
 
 export function solvePeriodicSteadyState(derived, initialState = null, solver = DEFAULT_SOLVER) {
-  const closedForm = solveClosedFormSteadyState(derived, initialState, solver);
+  const normalizedSolver = normalizeSolver(solver);
+  if (initialState !== null) {
+    validateState(initialState, "initialState");
+  }
+  const normalizedDerived = normalizeDerivedForSolver(derived, normalizedSolver);
+
+  const closedForm = solveClosedFormSteadyState(normalizedDerived, initialState, normalizedSolver);
   if (closedForm) {
-    if (solver.collectTrace) {
-      const traceSampled = sampleTransientTrace(derived, initialState, solver, closedForm.state);
+    if (normalizedSolver.collectTrace) {
+      const traceSampled = sampleTransientTrace(
+        normalizedDerived,
+        initialState,
+        normalizedSolver,
+        closedForm.state,
+      );
       return {
         ...closedForm,
         iterations: traceSampled.iterations,
@@ -53,7 +180,7 @@ export function solvePeriodicSteadyState(derived, initialState = null, solver = 
     }
     return closedForm;
   }
-  return solvePeriodicSteadyStateIterative(derived, initialState, solver);
+  return solvePeriodicSteadyStateIterative(normalizedDerived, initialState, normalizedSolver);
 }
 
 function solveClosedFormSteadyState(derived, initialState, solver) {
@@ -128,13 +255,7 @@ function sampleTransientTrace(derived, initialState, solver, targetState) {
   for (let i = 0; i < maxTraceIterations; i++) {
     const prevV3 = state.v3;
     const prevV4 = state.v4;
-    const step = cycleStep(state, {
-      ...derived,
-      transferGain: solver.transferGain,
-      useClamp: solver.useOutputClamp,
-      clampMinV: solver.clampMinV,
-      clampMaxV: solver.clampMaxV,
-    });
+    const step = cycleStep(state, derived);
     state = step.state;
     residualV = Math.max(Math.abs(state.v3 - prevV3), Math.abs(state.v4 - prevV4));
     trace.push({
@@ -174,13 +295,7 @@ function solvePeriodicSteadyStateIterative(derived, initialState = null, solver 
   for (let i = 0; i < solver.maxIter; i++) {
     const prevV3 = state.v3;
     const prevV4 = state.v4;
-    const step = cycleStep(state, {
-      ...derived,
-      transferGain: solver.transferGain,
-      useClamp: solver.useOutputClamp,
-      clampMinV: solver.clampMinV,
-      clampMaxV: solver.clampMaxV,
-    });
+    const step = cycleStep(state, derived);
     state = step.state;
     qSensorC = step.qSensorC;
     qTransferC = step.qTransferC;
