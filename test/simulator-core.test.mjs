@@ -4,6 +4,7 @@ import {
   DEFAULT_INPUTS,
   DEFAULT_SOLVER,
   simulate,
+  simulateSensorNodeWaveform,
   simulateWithState,
 } from '../src/simulator-core.mjs';
 
@@ -210,4 +211,30 @@ test('no-load steady-state follows doc fixed-point charge-sharing model', () => 
   const expectedSteady = 0.5 * steady.deltaVinV;
   assert.ok(near(steady.vOutSteadyV, expectedSteady, 0.003), `steady=${steady.vOutSteadyV}`);
   assert.ok(near(steady.vOutSteadyV, transient, 0.003), `steady=${steady.vOutSteadyV}, transient=${transient}`);
+});
+
+test('sensor waveform has Va≈Vb at centered geometry with symmetric components', () => {
+  const wave = simulateSensorNodeWaveform({
+    ...DEFAULT_INPUTS,
+    widthCm: Math.sqrt(43.5),
+    heightCm: Math.sqrt(43.5),
+    totalGapMm: 1.58,
+    position: 0.5,
+    freqHz: 62500,
+    vDrivePeakV: 5,
+    r10Ohm: 20000,
+    r11Ohm: 20000,
+    ccF: 130e-12,
+    epsilonR: 1,
+  });
+
+  assert.ok(wave.tS.length > 50);
+  assert.equal(wave.tS.length, wave.vaNodeV.length);
+  assert.equal(wave.tS.length, wave.vbNodeV.length);
+
+  let maxDiff = 0;
+  for (let i = 0; i < wave.tS.length; i++) {
+    maxDiff = Math.max(maxDiff, Math.abs(wave.vaNodeV[i] - wave.vbNodeV[i]));
+  }
+  assert.ok(maxDiff < 1e-6, `max |Va-Vb|=${maxDiff}`);
 });

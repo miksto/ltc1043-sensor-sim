@@ -145,22 +145,116 @@ export function solveSensorNodeVoltages({
   return { vaNodeV, vbNodeV };
 }
 
+function solveGeometry(p) {
+  const areaM2 = (p.widthCm * 1e-2) * (p.heightCm * 1e-2);
+  const totalGapM = p.totalGapMm * 1e-3;
+  const minGapM = p.minGapMm * 1e-3;
+  const dLeftM = Math.max(minGapM, p.position * totalGapM);
+  const dRightM = Math.max(minGapM, (1 - p.position) * totalGapM);
+  const caF = (EPS0 * p.epsilonR * areaM2) / Math.max(dLeftM, 1e-15);
+  const cbF = (EPS0 * p.epsilonR * areaM2) / Math.max(dRightM, 1e-15);
+  const deltaCF = caF - cbF;
+  return {
+    areaM2,
+    totalGapM,
+    minGapM,
+    dLeftM,
+    dRightM,
+    caF,
+    cbF,
+    deltaCF,
+  };
+}
+
+export function simulateSensorNodeWaveform(input, options = {}) {
+  const p = { ...DEFAULT_INPUTS, ...input };
+  const { dLeftM, dRightM, caF, cbF } = solveGeometry(p);
+
+  const freqHz = Math.max(p.freqHz, 1e-12);
+  const periodS = 1 / freqHz;
+  const halfPeriodS = periodS / 2;
+  const driveV = p.vDrivePeakV;
+
+  const pointsPerCycle = Math.max(80, Math.round(options.pointsPerCycle ?? 360));
+  const stepsPerHalf = Math.max(40, Math.floor(pointsPerCycle / 2));
+  const warmupCycles = Math.max(1, Math.round(options.warmupCycles ?? 40));
+  const dtS = halfPeriodS / stepsPerHalf;
+
+  const cA = Math.max(caF, 1e-18);
+  const cB = Math.max(cbF, 1e-18);
+  const cC = Math.max(p.ccF, 0);
+  const detC = cA * cB + cC * (cA + cB);
+  const inv11 = (cB + cC) / Math.max(detC, 1e-24);
+  const inv12 = cC / Math.max(detC, 1e-24);
+  const inv21 = cC / Math.max(detC, 1e-24);
+  const inv22 = (cA + cC) / Math.max(detC, 1e-24);
+  const g10 = 1 / Math.max(p.r10Ohm, 1e-18);
+  const g11 = 1 / Math.max(p.r11Ohm, 1e-18);
+
+  let va = 0;
+  let vb = 0;
+
+  function step(vSrc) {
+    const iA = g10 * (vSrc - va);
+    const iB = g11 * (vSrc - vb);
+    const dvaDt = inv11 * iA + inv12 * iB;
+    const dvbDt = inv21 * iA + inv22 * iB;
+    va += dtS * dvaDt;
+    vb += dtS * dvbDt;
+  }
+
+  function integrateHalf(vSrc) {
+    for (let i = 0; i < stepsPerHalf; i++) {
+      step(vSrc);
+    }
+  }
+
+  for (let i = 0; i < warmupCycles; i++) {
+    integrateHalf(+driveV);
+    integrateHalf(-driveV);
+  }
+
+  const tS = [0];
+  const vaNodeV = [va];
+  const vbNodeV = [vb];
+
+  function traceHalf(vSrc, tStartS) {
+    for (let i = 0; i < stepsPerHalf; i++) {
+      step(vSrc);
+      tS.push(tStartS + (i + 1) * dtS);
+      vaNodeV.push(va);
+      vbNodeV.push(vb);
+    }
+  }
+
+  traceHalf(+driveV, 0);
+  traceHalf(-driveV, halfPeriodS);
+
+  return {
+    tS,
+    vaNodeV,
+    vbNodeV,
+    periodS,
+    dLeftM,
+    dRightM,
+    caF,
+    cbF,
+  };
+}
+
 export function simulateWithState(input, initialState = null, solver = DEFAULT_SOLVER) {
   const p = { ...DEFAULT_INPUTS, ...input };
 
   const warnings = [];
   const c3F = Math.max(p.c3F, 1e-18);
   const c4F = Math.max(p.c4F, 1e-18);
-  const areaM2 = (p.widthCm * 1e-2) * (p.heightCm * 1e-2);
-  const totalGapM = p.totalGapMm * 1e-3;
-  const minGapM = p.minGapMm * 1e-3;
-
-  const dLeftM = Math.max(minGapM, p.position * totalGapM);
-  const dRightM = Math.max(minGapM, (1 - p.position) * totalGapM);
-
-  const caF = (EPS0 * p.epsilonR * areaM2) / Math.max(dLeftM, 1e-15);
-  const cbF = (EPS0 * p.epsilonR * areaM2) / Math.max(dRightM, 1e-15);
-  const deltaCF = caF - cbF;
+  const {
+    dLeftM,
+    dRightM,
+    caF,
+    cbF,
+    deltaCF,
+  } = solveGeometry(p);
 
   const omega = 2 * Math.PI * Math.max(p.freqHz, 1e-12);
   const { vaNodeV, vbNodeV } = solveSensorNodeVoltages({

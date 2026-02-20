@@ -76,3 +76,15 @@ export function sweepGap(base, sweep, seedState, simulateWithState) {
   }
   return { x, y };
 }
+
+export function buildSensorCycleData(base, simulateSensorNodeWaveform) {
+  const trace = simulateSensorNodeWaveform(base, {
+    pointsPerCycle: 360,
+    warmupCycles: 50,
+  });
+  return {
+    x: trace.tS.map((t) => t * 1e6),
+    va: trace.vaNodeV,
+    vb: trace.vbNodeV,
+  };
+}

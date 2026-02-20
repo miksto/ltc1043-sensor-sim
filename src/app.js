@@ -1,5 +1,6 @@
 import {
   simulate as coreSimulate,
+  simulateSensorNodeWaveform as coreSimulateSensorNodeWaveform,
   simulateWithState as coreSimulateWithState,
 } from "./simulator-core.mjs";
 import {
@@ -17,6 +18,7 @@ import {
 } from "./ui/format.js";
 import { drawChart } from "./ui/charts.js";
 import {
+  buildSensorCycleData,
   buildSolverResidualData,
   buildSolverTraceData,
   sweepFrequency,
@@ -38,6 +40,7 @@ const canvases = {
   freq: document.getElementById("chartFreq"),
   pos: document.getElementById("chartPos"),
   gap: document.getElementById("chartGap"),
+  sensorCycle: document.getElementById("chartSensorCycle"),
   solverTrace: document.getElementById("chartSolverTrace"),
   solverResidual: document.getElementById("chartSolverResidual"),
 };
@@ -97,6 +100,10 @@ function simulate(input) {
   return coreSimulate(input, SOLVER);
 }
 
+function simulateSensorNodeWaveform(input, options) {
+  return coreSimulateSensorNodeWaveform(input, options);
+}
+
 function run() {
   const { inputs, sweep } = readInputs();
   syncPositionDisplays();
@@ -117,6 +124,7 @@ function run() {
     POSITION_SWEEP_CENTER_TRAVEL_FRACTION,
   );
   const gapData = sweepGap(inputs, sweep, op.state, simulateWithState);
+  const cycleData = buildSensorCycleData(inputs, simulateSensorNodeWaveform);
 
   drawChart(canvases.freq, freqData.x, freqData.y, {
     titleX: "Frequency (Hz)",
@@ -137,6 +145,17 @@ function run() {
     titleY: "Vout (V)",
     lineColor: "#5cc9f5",
     xLog: false,
+  });
+
+  drawChart(canvases.sensorCycle, cycleData.x, cycleData.va, {
+    titleX: "Time within cycle (µs)",
+    titleY: "Sensor node voltage (V)",
+    lineColor: "#7dd3fc",
+    xLog: false,
+    lineLabel: "Va",
+    secondaryY: cycleData.vb,
+    secondaryColor: "#fbbf24",
+    secondaryLabel: "Vb",
   });
 
   const solverTraceData = buildSolverTraceData(op.trace || []);
