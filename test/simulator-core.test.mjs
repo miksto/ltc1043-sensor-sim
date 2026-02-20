@@ -238,3 +238,22 @@ test('sensor waveform has Va≈Vb at centered geometry with symmetric components
   }
   assert.ok(maxDiff < 1e-6, `max |Va-Vb|=${maxDiff}`);
 });
+
+test('very large C4 still solves to analytic steady-state (no early tiny-step stop)', () => {
+  const input = {
+    ...DEFAULT_INPUTS,
+    widthCm: Math.sqrt(43.5),
+    heightCm: Math.sqrt(43.5),
+    position: 0.55,
+    freqHz: 62500,
+    c3F: 4.7e-9,
+    c4F: 4.7e-4,
+  };
+  const r = simulate(input);
+  const shareRatio = input.c3F / (input.c3F + input.c4F);
+  const expectedVout = shareRatio * r.deltaVinV + (r.deltaVBiasPerCycleV / shareRatio);
+
+  assert.equal(r.solverConverged, true);
+  assert.ok(Math.abs(r.vOutSteadyV) > 1e-9, `vout=${r.vOutSteadyV}`);
+  assert.ok(near(r.vOutSteadyV, expectedVout, 1e-10), `vout=${r.vOutSteadyV}, expected=${expectedVout}`);
+});
