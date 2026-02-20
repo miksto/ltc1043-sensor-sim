@@ -1,32 +1,11 @@
-export const EPS0 = 8.8541878128e-12;
+import {
+  DEFAULT_INPUTS,
+  DEFAULT_SOLVER,
+  EPS0,
+} from "./model/defaults.mjs";
+import { solveGeometry } from "./model/geometry.mjs";
 
-export const DEFAULT_SOLVER = {
-  tolV: 1e-9,
-  maxIter: 10000,
-  transferGain: 1.0,
-  useOutputClamp: true,
-  clampMinV: -12,
-  clampMaxV: 12,
-  collectTrace: false,
-};
-
-export const DEFAULT_INPUTS = {
-  widthCm: Math.sqrt(43.5),
-  heightCm: Math.sqrt(43.5),
-  totalGapMm: 1.58,
-  minGapMm: 0.05,
-  position: 0.5,
-  freqHz: 62500,
-  vDrivePeakV: 5,
-  r10Ohm: 10000,
-  r11Ohm: 10000,
-  // AD706 typical input bias current at 25C (datasheet, Vcm = 0 V).
-  iBiasA: 50e-12,
-  c3F: 4700e-12,
-  c4F: 4700e-12,
-  ccF: 10e-12,
-  epsilonR: 1.0006,
-};
+export { DEFAULT_INPUTS, DEFAULT_SOLVER, EPS0 };
 
 export function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
@@ -143,27 +122,6 @@ export function solveSensorNodeVoltages({
   const vaNodeV = (b1 * a22 - a12 * b2) / det;
   const vbNodeV = (a11 * b2 - b1 * a21) / det;
   return { vaNodeV, vbNodeV };
-}
-
-function solveGeometry(p) {
-  const areaM2 = (p.widthCm * 1e-2) * (p.heightCm * 1e-2);
-  const totalGapM = p.totalGapMm * 1e-3;
-  const minGapM = p.minGapMm * 1e-3;
-  const dLeftM = Math.max(minGapM, p.position * totalGapM);
-  const dRightM = Math.max(minGapM, (1 - p.position) * totalGapM);
-  const caF = (EPS0 * p.epsilonR * areaM2) / Math.max(dLeftM, 1e-15);
-  const cbF = (EPS0 * p.epsilonR * areaM2) / Math.max(dRightM, 1e-15);
-  const deltaCF = caF - cbF;
-  return {
-    areaM2,
-    totalGapM,
-    minGapM,
-    dLeftM,
-    dRightM,
-    caF,
-    cbF,
-    deltaCF,
-  };
 }
 
 export function simulateSensorNodeWaveform(input, options = {}) {
