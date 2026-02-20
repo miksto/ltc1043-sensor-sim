@@ -131,7 +131,7 @@
             </div>
 
             <div class="field wide">
-              <label for="ccF">Cc stray <span class="unit">(pF)</span></label>
+              <label for="ccF">Cc mutual (A-B) <span class="unit">(pF)</span></label>
               <input id="ccF" type="number" step="any" min="0" />
             </div>
           </div>
@@ -189,7 +189,8 @@
             </div>
             <div id="validationRows"></div>
             <p class="validation-note">
-              Reference values from the PDF are displayed only for comparison and are not used in core equations.
+              "Doc fixture" rows use fixed application-note parameters for apples-to-apples reference.
+              "Current inputs" rows use your active parameter values.
             </p>
           </div>
         </section>
@@ -259,6 +260,7 @@
             Bidirectional switched-cap model:
             each cycle samples the RC-attenuated differential sensor voltage onto <code>C3</code>, then applies charge
             sharing between <code>C3</code> and <code>C4</code>, plus an output shift from op-amp input bias current.
+            The parameter <code>Cc</code> is modeled as mutual capacitance between sensor nodes A and B.
             Periodic steady-state is solved iteratively from <code>x[n+1]=F(x[n])</code>.
             Polarity is mapped so rightward motion is positive.
           </p>

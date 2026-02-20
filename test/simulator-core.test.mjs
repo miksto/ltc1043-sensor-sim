@@ -176,6 +176,27 @@ test('doc-like transient slope near center is ~1.25 V/mm', () => {
   assert.ok(slopeVPerMm < 0, `expected negative slope, got ${slopeVPerMm}`);
 });
 
+test('mutual Cc between A/B nodes attenuates but does not collapse doc slope at 130 pF', () => {
+  const dxMm = 0.001;
+  const plus = simulateTransientCycles(
+    docFixture({
+      position: positionFromDisplacementMm(dxMm, 1.58),
+      ccF: 130e-12,
+    }),
+    10,
+  ).vOutSteadyV;
+  const minus = simulateTransientCycles(
+    docFixture({
+      position: positionFromDisplacementMm(-dxMm, 1.58),
+      ccF: 130e-12,
+    }),
+    10,
+  ).vOutSteadyV;
+
+  const slopeVPerMm = Math.abs((plus - minus) / (2 * dxMm));
+  assert.ok(slopeVPerMm > 0.48 && slopeVPerMm < 0.55, `slope=${slopeVPerMm} V/mm`);
+});
+
 test('no-load steady-state follows doc fixed-point charge-sharing model', () => {
   // With RC-attenuated differential input and C3/C4 sharing, steady-state matches 0.5*DeltaVin.
   const xMm = 0.1;

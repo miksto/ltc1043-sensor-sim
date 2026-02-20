@@ -110,6 +110,41 @@ export function solvePeriodicSteadyState(derived, initialState = null, solver = 
   return { converged: false, iterations, residualV, state, qSensorC, qTransferC, trace };
 }
 
+export function solveSensorNodeVoltages({
+  vDrivePeakV,
+  r10Ohm,
+  r11Ohm,
+  caF,
+  cbF,
+  ccF,
+  omega,
+}) {
+  const g10 = 1 / Math.max(r10Ohm, 1e-18);
+  const g11 = 1 / Math.max(r11Ohm, 1e-18);
+  const k = Math.max(omega, 0) * Math.max(ccF, 0);
+
+  // Linearized RC-domain nodal solve (matches V=Vclk/(1+omega*R*C) for single-node case):
+  // (Va - Vs)/R10 + omega*Ca*Va + omega*Cc*(Va - Vb) = 0
+  // (Vb - Vs)/R11 + omega*Cb*Vb + omega*Cc*(Vb - Va) = 0
+  const a11 = g10 + Math.max(omega, 0) * Math.max(caF, 0) + k;
+  const a12 = -k;
+  const a21 = -k;
+  const a22 = g11 + Math.max(omega, 0) * Math.max(cbF, 0) + k;
+  const b1 = g10 * vDrivePeakV;
+  const b2 = g11 * vDrivePeakV;
+
+  const det = a11 * a22 - a12 * a21;
+  if (!Number.isFinite(det) || Math.abs(det) < 1e-30) {
+    const vaFallback = vDrivePeakV / (1 + Math.max(omega, 0) * r10Ohm * Math.max(caF, 0));
+    const vbFallback = vDrivePeakV / (1 + Math.max(omega, 0) * r11Ohm * Math.max(cbF, 0));
+    return { vaNodeV: vaFallback, vbNodeV: vbFallback };
+  }
+
+  const vaNodeV = (b1 * a22 - a12 * b2) / det;
+  const vbNodeV = (a11 * b2 - b1 * a21) / det;
+  return { vaNodeV, vbNodeV };
+}
+
 export function simulateWithState(input, initialState = null, solver = DEFAULT_SOLVER) {
   const p = { ...DEFAULT_INPUTS, ...input };
 
@@ -128,10 +163,15 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
   const deltaCF = caF - cbF;
 
   const omega = 2 * Math.PI * Math.max(p.freqHz, 1e-12);
-  const caEffF = Math.max(caF + p.ccF, 1e-18);
-  const cbEffF = Math.max(cbF + p.ccF, 1e-18);
-  const vaNodeV = p.vDrivePeakV / (1 + omega * Math.max(p.r10Ohm, 1e-18) * caEffF);
-  const vbNodeV = p.vDrivePeakV / (1 + omega * Math.max(p.r11Ohm, 1e-18) * cbEffF);
+  const { vaNodeV, vbNodeV } = solveSensorNodeVoltages({
+    vDrivePeakV: p.vDrivePeakV,
+    r10Ohm: p.r10Ohm,
+    r11Ohm: p.r11Ohm,
+    caF,
+    cbF,
+    ccF: p.ccF,
+    omega,
+  });
   const deltaVinV = vaNodeV - vbNodeV;
   // Keep historical output polarity (vOut = -v4) by inverting sampled differential sign.
   const c3SampleV = -deltaVinV;

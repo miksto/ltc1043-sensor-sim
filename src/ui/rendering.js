@@ -76,48 +76,61 @@ export function renderMetrics(metricsEl, warningsEl, res) {
 
 export function renderValidation(validationRowsEl, simulate, baseInputs, ref) {
   const sideCm = Math.sqrt(43.5);
-  const centered = simulate({
+  const docInputs = {
     ...baseInputs,
-    position: 0.5,
-    freqHz: 62500,
-    totalGapMm: 1.58,
     widthCm: sideCm,
     heightCm: sideCm,
+    totalGapMm: 1.58,
+    minGapMm: 0.05,
+    freqHz: 62500,
+    vDrivePeakV: 5,
+    r10Ohm: 20000,
+    r11Ohm: 20000,
+    c3F: 4.7e-9,
+    c4F: 4.7e-9,
+    ccF: 0,
+    epsilonR: 1,
+    iBiasA: 50e-12,
+  };
+
+  const centeredDoc = simulate({
+    ...docInputs,
+    position: 0.5,
   });
 
-  const p0 = 0.5;
-  const dp = 1e-4;
-  const left = simulate({
-    ...baseInputs,
-    position: p0 - dp,
-    freqHz: 62500,
-    totalGapMm: 1.58,
-    widthCm: sideCm,
-    heightCm: sideCm,
-  }).vOutSteadyV;
+  function slopeAtCenter(inputs) {
+    const p0 = 0.5;
+    const dp = 1e-4;
+    const left = simulate({
+      ...inputs,
+      position: p0 - dp,
+    }).vOutSteadyV;
+    const right = simulate({
+      ...inputs,
+      position: p0 + dp,
+    }).vOutSteadyV;
+    const dxMm = 2 * dp * inputs.totalGapMm;
+    return (right - left) / Math.max(dxMm, 1e-15);
+  }
 
-  const right = simulate({
-    ...baseInputs,
-    position: p0 + dp,
-    freqHz: 62500,
-    totalGapMm: 1.58,
-    widthCm: sideCm,
-    heightCm: sideCm,
-  }).vOutSteadyV;
-
-  const dxMm = 2 * dp * 1.58;
-  const slopeVPerMm = (right - left) / Math.max(dxMm, 1e-15);
+  const slopeDocVPerMm = slopeAtCenter(docInputs);
+  const slopeCurrentVPerMm = slopeAtCenter(baseInputs);
 
   const rows = [
     {
-      k: "Centered capacitance (each)",
-      c: `${(centered.caF * 1e12).toFixed(3)} pF`,
-      r: `${ref.centeredCapPF.toFixed(1)} pF (${pctDelta(centered.caF * 1e12, ref.centeredCapPF)})`,
+      k: "Centered capacitance (doc fixture)",
+      c: `${(centeredDoc.caF * 1e12).toFixed(3)} pF`,
+      r: `${ref.centeredCapPF.toFixed(1)} pF (${pctDelta(centeredDoc.caF * 1e12, ref.centeredCapPF)})`,
     },
     {
-      k: "Local slope dVout/dx near p=0.5",
-      c: `${slopeVPerMm.toFixed(4)} V/mm`,
-      r: `${ref.slopeVPerMm.toFixed(2)} V/mm (${pctDelta(slopeVPerMm, ref.slopeVPerMm)})`,
+      k: "Local slope dVout/dx (doc fixture)",
+      c: `${slopeDocVPerMm.toFixed(4)} V/mm`,
+      r: `${ref.slopeVPerMm.toFixed(2)} V/mm (${pctDelta(slopeDocVPerMm, ref.slopeVPerMm)})`,
+    },
+    {
+      k: "Local slope dVout/dx (current inputs)",
+      c: `${slopeCurrentVPerMm.toFixed(4)} V/mm`,
+      r: "n/a (depends on current parameter values)",
     },
   ];
 
