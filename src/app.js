@@ -61,7 +61,7 @@ function readInputs() {
     vDrivePeakV: toPos(el.vDrivePeakV.value, DEFAULTS.vDrivePeakV),
     r10Ohm: toPos(el.r10Ohm.value, DEFAULTS.r10Ohm),
     r11Ohm: toPos(el.r11Ohm.value, DEFAULTS.r11Ohm),
-    rEqOhm: toPos(el.rEqOhm.value, DEFAULTS.rEqOhm),
+    iBiasA: toNum(el.iBiasPA.value, DEFAULTS.iBiasPA) * 1e-12,
     c3F: toPos(el.c3F.value, DEFAULTS.c3F) * 1e-12,
     c4F: toPos(el.c4F.value, DEFAULTS.c4F) * 1e-12,
     ccF: Math.max(0, toNum(el.ccF.value, DEFAULTS.ccF)) * 1e-12,

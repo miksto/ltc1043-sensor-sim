@@ -2,8 +2,8 @@ import {
   escapeHtml,
   fmtCap,
   fmtCharge,
+  fmtCurrent,
   fmtHz,
-  fmtOhm,
   fmtSec,
   fmtVolt,
   pctDelta,
@@ -24,22 +24,23 @@ export function renderMetrics(metricsEl, warningsEl, res) {
     {
       title: "Charge Transfer",
       items: [
-        ["Q_packet (open-loop)", fmtCharge(res.qPacketC)],
+        ["Va node (RC atten.)", fmtVolt(res.vaNodeV)],
+        ["Vb node (RC atten.)", fmtVolt(res.vbNodeV)],
+        ["ΔVin = Va - Vb", fmtVolt(res.deltaVinV)],
+        ["Q_sample on C3", fmtCharge(res.qPacketC)],
         ["Q_transfer/cycle (signed)", fmtCharge(res.qToC4C)],
+        ["Op-amp input bias", fmtCurrent(res.iBiasA)],
+        ["ΔV_bias/cycle on C4", fmtVolt(res.deltaVBiasPerCycleV)],
         ["V3 steady (internal)", fmtVolt(res.v3SteadyV)],
-        ["α", res.alpha.toFixed(6)],
       ],
     },
     {
       title: "Output And Timing",
       items: [
         ["Vout steady", fmtVolt(res.vOutSteadyV)],
-        ["Output pole f", fmtHz(res.fPoleHz)],
-        ["τ_out", fmtSec(res.tauOutS)],
         ["τA = R10·(Ca+Cc)", fmtSec(res.tauAS)],
         ["τB = R11·(Cb+Cc)", fmtSec(res.tauBS)],
         ["f_max for full-charge (5τ rule)", fmtHz(res.fWarningThresholdHz)],
-        ["R_out_load (used)", fmtOhm(res.rEqOhm)],
       ],
     },
     {
@@ -117,11 +118,6 @@ export function renderValidation(validationRowsEl, simulate, baseInputs, ref) {
       k: "Local slope dVout/dx near p=0.5",
       c: `${slopeVPerMm.toFixed(4)} V/mm`,
       r: `${ref.slopeVPerMm.toFixed(2)} V/mm (${pctDelta(slopeVPerMm, ref.slopeVPerMm)})`,
-    },
-    {
-      k: "Output pole",
-      c: `${centered.fPoleHz.toFixed(3)} Hz`,
-      r: `${ref.poleHz.toFixed(0)} Hz (${pctDelta(centered.fPoleHz, ref.poleHz)})`,
     },
   ];
 

@@ -24,7 +24,7 @@ function docFixture(overrides = {}) {
     vDrivePeakV: 5,
     r10Ohm: 20000,
     r11Ohm: 20000,
-    rEqOhm: 1e12,
+    iBiasA: 50e-12,
     c3F: 4.7e-9,
     c4F: 4.7e-9,
     ccF: 0,
@@ -87,8 +87,8 @@ test('solver converges at defaults', () => {
   assert.ok(r.solverResidualV < 1e-7);
 });
 
-test('output remains bounded for very large R_eq due to equilibrium/clamp', () => {
-  const r = simulate({ ...DEFAULT_INPUTS, position: 0.6, rEqOhm: 1e9 });
+test('output remains bounded for large op-amp bias current due to equilibrium/clamp', () => {
+  const r = simulate({ ...DEFAULT_INPUTS, position: 0.6, iBiasA: 1e-6 });
   assert.ok(Number.isFinite(r.vOutSteadyV));
   assert.ok(Math.abs(r.vOutSteadyV) <= Math.abs(DEFAULT_SOLVER.clampMaxV) + 1e-9);
 });
@@ -122,7 +122,7 @@ test('no NaN/Infinity across sampled operating range', () => {
       position: t,
       totalGapMm: 0.4 + t * (3.0 - 0.4),
       freqHz: 1000 + t * (500000 - 1000),
-      rEqOhm: 1e3 + t * (1e7 - 1e3),
+      iBiasA: -1e-9 + t * (2e-9),
     });
     assert.ok(Number.isFinite(r.vOutSteadyV), `bad vout at i=${i}`);
     assert.ok(Number.isFinite(r.caF) && Number.isFinite(r.cbF), `bad caps at i=${i}`);

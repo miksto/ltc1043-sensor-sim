@@ -66,6 +66,15 @@ export function fmtOhm(v) {
   return `${shortFloat(v)} Ω`;
 }
 
+export function fmtCurrent(v) {
+  const a = Math.abs(v);
+  if (a >= 1e-3) return `${shortFloat(v * 1e3)} mA`;
+  if (a >= 1e-6) return `${shortFloat(v * 1e6)} µA`;
+  if (a >= 1e-9) return `${shortFloat(v * 1e9)} nA`;
+  if (a >= 1e-12) return `${shortFloat(v * 1e12)} pA`;
+  return `${shortFloat(v)} A`;
+}
+
 export function pctDelta(calc, ref) {
   if (!Number.isFinite(calc) || !Number.isFinite(ref) || ref === 0) return "n/a";
   const d = ((calc - ref) / ref) * 100;

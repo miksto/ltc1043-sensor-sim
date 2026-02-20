@@ -20,7 +20,8 @@ export const DEFAULT_INPUTS = {
   vDrivePeakV: 5,
   r10Ohm: 10000,
   r11Ohm: 10000,
-  rEqOhm: 1_000_000,
+  // AD706 typical input bias current at 25C (datasheet, Vcm = 0 V).
+  iBiasA: 50e-12,
   c3F: 4700e-12,
   c4F: 4700e-12,
   ccF: 10e-12,
@@ -36,7 +37,7 @@ export function cycleStep(state, derived) {
     c3F,
     c4F,
     c3SampleV,
-    alpha,
+    deltaVBiasPerCycleV,
     transferGain,
     useClamp,
     clampMinV,
@@ -52,9 +53,8 @@ export function cycleStep(state, derived) {
   const qTransferC = transferGain * cEqF * (v3Drive - v4A);
   const v3B = v3Drive - qTransferC / c3F;
   let v4B = v4A + qTransferC / c4F;
+  v4B -= deltaVBiasPerCycleV;
   const qSensorC = c3F * v3A;
-
-  v4B *= alpha;
 
   if (useClamp) {
     v4B = clamp(v4B, clampMinV, clampMaxV);
@@ -137,18 +137,16 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
   const c3SampleV = -deltaVinV;
   const qPacketC = c3F * c3SampleV;
 
-  const rEqOhm = Math.max(p.rEqOhm, 1e-18);
-  const tauOutS = Math.max(rEqOhm * c4F, 1e-18);
-
   const T = 1 / Math.max(p.freqHz, 1e-12);
-  const alpha = Math.exp(-T / tauOutS);
+  const iBiasA = Number.isFinite(p.iBiasA) ? p.iBiasA : DEFAULT_INPUTS.iBiasA;
+  const deltaVBiasPerCycleV = (iBiasA * T) / c4F;
 
   const solved = solvePeriodicSteadyState(
     {
       c3F,
       c4F,
       c3SampleV,
-      alpha,
+      deltaVBiasPerCycleV,
     },
     initialState,
     solver,
@@ -156,8 +154,6 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
 
   const vOutSteadyV = -solved.state.v4;
   const qToC4C = solved.qTransferC;
-
-  const fPoleHz = 1 / (2 * Math.PI * tauOutS);
 
   const tHalf = 1 / (2 * Math.max(p.freqHz, 1e-12));
   const tauA = p.r10Ohm * (caF + p.ccF);
@@ -196,13 +192,11 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
       vaNodeV,
       vbNodeV,
       deltaVinV,
-      tauOutS,
-      fPoleHz,
+      iBiasA,
+      deltaVBiasPerCycleV,
       warnings,
       dLeftM,
       dRightM,
-      alpha,
-      rEqOhm,
       tauAS: tauA,
       tauBS: tauB,
       fWarningThresholdHz,

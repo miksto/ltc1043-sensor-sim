@@ -9,7 +9,7 @@ Single-page simulator for a capacitive displacement sensor front-end using an LT
 ## What This Simulates
 - Sensor geometry to capacitance (`Ca`, `Cb`) from physical dimensions.
 - Switched-cap charge transfer between sensor, `C3`, and `C4`.
-- Output behavior with leakage through configurable `R_out_load`.
+- Output shift from configurable op-amp input bias current (AD706 default).
 - Frequency, position, and gap sweeps with live charts.
 - Solver convergence diagnostics (iteration trace + residual chart).
 

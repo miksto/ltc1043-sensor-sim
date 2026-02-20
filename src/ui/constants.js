@@ -3,7 +3,6 @@ import { DEFAULT_SOLVER } from "../simulator-core.mjs";
 export const REF = {
   centeredCapPF: 48.2,
   slopeVPerMm: 1.25,
-  poleHz: 306,
 };
 
 export const SOLVER = { ...DEFAULT_SOLVER };
@@ -21,7 +20,7 @@ export const DEFAULTS = {
   vDrivePeakV: 5,
   r10Ohm: 10000,
   r11Ohm: 10000,
-  rEqOhm: 1000000,
+  iBiasPA: 50,
   c3F: 4700,
   c4F: 4700,
   ccF: 10,
@@ -40,6 +39,6 @@ export const INPUT_IDS = [
   "widthCm", "heightCm", "totalGapMm", "minGapMm", "position", "positionText", "positionOffsetMm", "freqHz",
   "plateAreaInfo",
   "residualScale",
-  "vDrivePeakV", "epsilonR", "r10Ohm", "r11Ohm", "rEqOhm", "c3F", "c4F", "ccF",
+  "vDrivePeakV", "epsilonR", "r10Ohm", "r11Ohm", "iBiasPA", "c3F", "c4F", "ccF",
   "freqMinHz", "freqMaxHz", "freqPoints", "gapMinMm", "gapMaxMm", "gapPoints", "positionPoints",
 ];
