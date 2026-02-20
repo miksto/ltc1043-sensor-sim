@@ -109,21 +109,21 @@ function run() {
   syncPositionDisplays();
   updatePlateAreaInfo();
 
-  const op = simulateWithState(inputs, null, { ...SOLVER, collectTrace: true });
-  const res = op.result;
+  const operatingPoint = simulateWithState(inputs, null, { ...SOLVER, collectTrace: true });
+  const result = operatingPoint.result;
 
-  renderMetrics(metricsEl, warningsEl, res);
+  renderMetrics(metricsEl, warningsEl, result);
   renderValidation(validationRowsEl, simulate, inputs, REF);
 
-  const freqData = sweepFrequency(inputs, sweep, op.state, simulateWithState);
+  const freqData = sweepFrequency(inputs, sweep, operatingPoint.state, simulateWithState);
   const posData = sweepPosition(
     inputs,
     sweep,
-    op.state,
+    operatingPoint.state,
     simulateWithState,
     POSITION_SWEEP_CENTER_TRAVEL_FRACTION,
   );
-  const gapData = sweepGap(inputs, sweep, op.state, simulateWithState);
+  const gapData = sweepGap(inputs, sweep, operatingPoint.state, simulateWithState);
   const cycleData = buildSensorCycleData(inputs, simulateSensorNodeWaveform);
 
   drawChart(canvases.freq, freqData.x, freqData.y, {
@@ -158,7 +158,7 @@ function run() {
     secondaryLabel: "Vb",
   });
 
-  const solverTraceData = buildSolverTraceData(op.trace || []);
+  const solverTraceData = buildSolverTraceData(operatingPoint.trace || []);
   drawChart(canvases.solverTrace, solverTraceData.x, solverTraceData.v3, {
     titleX: "Iteration",
     titleY: "Voltage (V)",
@@ -171,7 +171,7 @@ function run() {
   });
 
   const residualScale = el.residualScale?.value === "log" ? "log" : "linear";
-  const residualData = buildSolverResidualData(op.trace || [], residualScale);
+  const residualData = buildSolverResidualData(operatingPoint.trace || [], residualScale);
   drawChart(canvases.solverResidual, residualData.x, residualData.y, {
     titleX: "Iteration",
     titleY: residualData.yLabel,

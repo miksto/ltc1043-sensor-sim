@@ -27,7 +27,7 @@ export function renderMetrics(metricsEl, warningsEl, res) {
         ["Va node (RC atten.)", fmtVolt(res.vaNodeV)],
         ["Vb node (RC atten.)", fmtVolt(res.vbNodeV)],
         ["ΔVin = Va - Vb", fmtVolt(res.deltaVinV)],
-        ["Q_sample on C3", fmtCharge(res.qPacketC)],
+        ["Q_sample on C3", fmtCharge(res.qSampleOnC3C ?? res.qPacketC)],
         ["Q_transfer/cycle (signed)", fmtCharge(res.qToC4C)],
         ["Op-amp input bias", fmtCurrent(res.iBiasA)],
         ["ΔV_bias/cycle on C4", fmtVolt(res.deltaVBiasPerCycleV)],

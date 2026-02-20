@@ -16,24 +16,24 @@ export function cycleStep(state, derived) {
     clampMaxV,
   } = derived;
 
-  const v3A = c3SampleV;
-  const v4A = state.v4;
-  const shareRatio = c3F / Math.max(c3F + c4F, 1e-18);
-  const v3Drive = shareRatio * v3A;
+  const sampledC3VoltageV = c3SampleV;
+  const outputCapVoltageBeforeV = state.v4;
+  const chargeSharingRatio = c3F / Math.max(c3F + c4F, 1e-18);
+  const effectiveC3DriveV = chargeSharingRatio * sampledC3VoltageV;
 
-  const cEqF = (c3F * c4F) / Math.max(c3F + c4F, 1e-18);
-  const qTransferC = transferGain * cEqF * (v3Drive - v4A);
-  const v3B = v3Drive - qTransferC / c3F;
-  let v4B = v4A + qTransferC / c4F;
-  v4B -= deltaVBiasPerCycleV;
-  const qSensorC = c3F * v3A;
+  const transferEqCapF = (c3F * c4F) / Math.max(c3F + c4F, 1e-18);
+  const qTransferC = transferGain * transferEqCapF * (effectiveC3DriveV - outputCapVoltageBeforeV);
+  const c3VoltageAfterShareV = effectiveC3DriveV - qTransferC / c3F;
+  let outputCapVoltageAfterV = outputCapVoltageBeforeV + qTransferC / c4F;
+  outputCapVoltageAfterV -= deltaVBiasPerCycleV;
+  const qSensorC = c3F * sampledC3VoltageV;
 
   if (useClamp) {
-    v4B = clamp(v4B, clampMinV, clampMaxV);
+    outputCapVoltageAfterV = clamp(outputCapVoltageAfterV, clampMinV, clampMaxV);
   }
 
   return {
-    state: { v3: v3B, v4: v4B },
+    state: { v3: c3VoltageAfterShareV, v4: outputCapVoltageAfterV },
     qSensorC,
     qTransferC,
   };

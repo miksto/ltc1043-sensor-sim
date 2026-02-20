@@ -35,11 +35,11 @@ export function buildSolverResidualData(trace, scale) {
 export function sweepFrequency(base, sweep, seedState, simulateWithState) {
   const x = logSpace(sweep.freqMinHz, sweep.freqMaxHz, sweep.freqPoints);
   const y = [];
-  let state = seedState ? { ...seedState } : null;
+  let warmState = seedState ? { ...seedState } : null;
   for (const f of x) {
-    const solved = simulateWithState({ ...base, freqHz: f }, state);
-    y.push(solved.result.vOutSteadyV);
-    state = solved.state;
+    const sweepPoint = simulateWithState({ ...base, freqHz: f }, warmState);
+    y.push(sweepPoint.result.vOutSteadyV);
+    warmState = sweepPoint.state;
   }
   return { x, y };
 }
@@ -51,13 +51,13 @@ export function sweepPosition(base, sweep, seedState, simulateWithState, centerT
   const halfSpan = 0.5 * centerTravelFraction;
   const pMin = clamp(0.5 - halfSpan, 0, 1);
   const pMax = clamp(0.5 + halfSpan, 0, 1);
-  let state = seedState ? { ...seedState } : null;
+  let warmState = seedState ? { ...seedState } : null;
   for (let i = 0; i < n; i++) {
     const p = pMin + (i / (n - 1)) * (pMax - pMin);
     x.push(p);
-    const solved = simulateWithState({ ...base, position: p }, state);
-    y.push(solved.result.vOutSteadyV);
-    state = solved.state;
+    const sweepPoint = simulateWithState({ ...base, position: p }, warmState);
+    y.push(sweepPoint.result.vOutSteadyV);
+    warmState = sweepPoint.state;
   }
   return { x, y };
 }
@@ -66,13 +66,13 @@ export function sweepGap(base, sweep, seedState, simulateWithState) {
   const n = sweep.gapPoints;
   const x = [];
   const y = [];
-  let state = seedState ? { ...seedState } : null;
+  let warmState = seedState ? { ...seedState } : null;
   for (let i = 0; i < n; i++) {
     const g = sweep.gapMinMm + (i / (n - 1)) * (sweep.gapMaxMm - sweep.gapMinMm);
     x.push(g);
-    const solved = simulateWithState({ ...base, totalGapMm: g }, state);
-    y.push(solved.result.vOutSteadyV);
-    state = solved.state;
+    const sweepPoint = simulateWithState({ ...base, totalGapMm: g }, warmState);
+    y.push(sweepPoint.result.vOutSteadyV);
+    warmState = sweepPoint.state;
   }
   return { x, y };
 }
