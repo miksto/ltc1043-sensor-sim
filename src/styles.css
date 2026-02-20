@@ -188,6 +188,12 @@ body::before {
 }
 
 /* ─── Sidebar ─── */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+}
 
 /* ─── Input groups (fieldsets) ─── */
 .input-group {
@@ -604,6 +610,12 @@ canvas {
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    height: auto;
+    overflow: visible;
   }
 
   canvas {
