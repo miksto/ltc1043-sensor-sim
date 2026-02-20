@@ -196,8 +196,10 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
   const qToC4C = solved.qTransferC;
 
   const tHalf = 1 / (2 * Math.max(p.freqHz, 1e-12));
-  const tauA = p.r10Ohm * (caF + p.ccF);
-  const tauB = p.r11Ohm * (cbF + p.ccF);
+  // 5*tau warning is a heuristic; for mutual Cc, branch RC is best represented
+  // by the direct shunt capacitances (Ca/Cb) rather than treating Cc as ground shunt.
+  const tauA = p.r10Ohm * caF;
+  const tauB = p.r11Ohm * cbF;
   const tauMax = Math.max(tauA, tauB);
   const fWarningThresholdHz = 1 / (10 * Math.max(tauMax, 1e-18));
 

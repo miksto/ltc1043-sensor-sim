@@ -38,8 +38,8 @@ export function renderMetrics(metricsEl, warningsEl, res) {
       title: "Output And Timing",
       items: [
         ["Vout steady", fmtVolt(res.vOutSteadyV)],
-        ["τA = R10·(Ca+Cc)", fmtSec(res.tauAS)],
-        ["τB = R11·(Cb+Cc)", fmtSec(res.tauBS)],
+        ["τA ≈ R10·Ca (heuristic)", fmtSec(res.tauAS)],
+        ["τB ≈ R11·Cb (heuristic)", fmtSec(res.tauBS)],
         ["f_max for full-charge (5τ rule)", fmtHz(res.fWarningThresholdHz)],
       ],
     },
