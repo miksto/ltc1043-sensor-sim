@@ -4,3 +4,6 @@ dist/
 .firebase/
 .DS_Store
 coverage/
+
+## Intelij IDEA
+.idea
