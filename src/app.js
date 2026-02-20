@@ -2,21 +2,16 @@ import {
   simulate as coreSimulate,
   simulateSensorNodeWaveform as coreSimulateSensorNodeWaveform,
   simulateWithState as coreSimulateWithState,
-} from "./simulator-core.mjs";
+} from './simulator-core.mjs';
 import {
   DEFAULTS,
   INPUT_IDS,
   POSITION_SWEEP_CENTER_TRAVEL_FRACTION,
   REF,
   SOLVER,
-} from "./ui/constants.js";
-import {
-  clamp,
-  shortFloat,
-  toNum,
-  toPos,
-} from "./ui/format.js";
-import { drawChart } from "./ui/charts.js";
+} from './ui/constants.js';
+import { clamp, shortFloat, toNum, toPos } from './ui/format.js';
+import { drawChart } from './ui/charts.js';
 import {
   buildSensorCycleData,
   buildSolverResidualData,
@@ -24,25 +19,25 @@ import {
   sweepFrequency,
   sweepGap,
   sweepPosition,
-} from "./ui/sweeps.js";
-import { renderMetrics, renderValidation } from "./ui/rendering.js";
+} from './ui/sweeps.js';
+import { renderMetrics, renderValidation } from './ui/rendering.js';
 
 const el = {};
 for (const id of INPUT_IDS) {
   el[id] = document.getElementById(id);
 }
 
-const metricsEl = document.getElementById("metrics");
-const warningsEl = document.getElementById("warnings");
-const validationRowsEl = document.getElementById("validationRows");
+const metricsEl = document.getElementById('metrics');
+const warningsEl = document.getElementById('warnings');
+const validationRowsEl = document.getElementById('validationRows');
 
 const canvases = {
-  freq: document.getElementById("chartFreq"),
-  pos: document.getElementById("chartPos"),
-  gap: document.getElementById("chartGap"),
-  sensorCycle: document.getElementById("chartSensorCycle"),
-  solverTrace: document.getElementById("chartSolverTrace"),
-  solverResidual: document.getElementById("chartSolverResidual"),
+  freq: document.getElementById('chartFreq'),
+  pos: document.getElementById('chartPos'),
+  gap: document.getElementById('chartGap'),
+  sensorCycle: document.getElementById('chartSensorCycle'),
+  solverTrace: document.getElementById('chartSolverTrace'),
+  solverResidual: document.getElementById('chartSolverResidual'),
 };
 
 function setDefaults() {
@@ -79,7 +74,9 @@ function readInputs() {
     gapMinMm: toPos(el.gapMinMm.value, DEFAULTS.gapMinMm),
     gapMaxMm: toPos(el.gapMaxMm.value, DEFAULTS.gapMaxMm),
     gapPoints: Math.round(toPos(el.gapPoints.value, DEFAULTS.gapPoints)),
-    positionPoints: Math.round(toPos(el.positionPoints.value, DEFAULTS.positionPoints)),
+    positionPoints: Math.round(
+      toPos(el.positionPoints.value, DEFAULTS.positionPoints),
+    ),
   };
 
   if (sweep.freqMaxHz <= sweep.freqMinHz) {
@@ -109,13 +106,21 @@ function run() {
   syncPositionDisplays();
   updatePlateAreaInfo();
 
-  const operatingPoint = simulateWithState(inputs, null, { ...SOLVER, collectTrace: true });
+  const operatingPoint = simulateWithState(inputs, null, {
+    ...SOLVER,
+    collectTrace: true,
+  });
   const result = operatingPoint.result;
 
   renderMetrics(metricsEl, warningsEl, result);
   renderValidation(validationRowsEl, simulate, inputs, REF);
 
-  const freqData = sweepFrequency(inputs, sweep, operatingPoint.state, simulateWithState);
+  const freqData = sweepFrequency(
+    inputs,
+    sweep,
+    operatingPoint.state,
+    simulateWithState,
+  );
   const posData = sweepPosition(
     inputs,
     sweep,
@@ -123,59 +128,79 @@ function run() {
     simulateWithState,
     POSITION_SWEEP_CENTER_TRAVEL_FRACTION,
   );
-  const gapData = sweepGap(inputs, sweep, operatingPoint.state, simulateWithState);
+  const gapData = sweepGap(
+    inputs,
+    sweep,
+    operatingPoint.state,
+    simulateWithState,
+  );
   const cycleData = buildSensorCycleData(inputs, simulateSensorNodeWaveform);
 
   drawChart(canvases.freq, freqData.x, freqData.y, {
-    titleX: "Frequency (Hz)",
-    titleY: "Vout (V)",
-    lineColor: "#00e68a",
+    titleX: 'Frequency (Hz)',
+    titleY: 'Vout (V)',
+    xUnit: 'Hz',
+    yUnit: 'V',
+    lineColor: '#00e68a',
     xLog: true,
   });
 
   drawChart(canvases.pos, posData.x, posData.y, {
-    titleX: "Position fraction",
-    titleY: "Vout (V)",
-    lineColor: "#ffb347",
+    titleX: 'Sensor position p (0 = left, 1 = right)',
+    titleY: 'Vout (V)',
+    xUnit: 'fraction',
+    yUnit: 'V',
+    lineColor: '#ffb347',
     xLog: false,
   });
 
   drawChart(canvases.gap, gapData.x, gapData.y, {
-    titleX: "Total separation G (mm)",
-    titleY: "Vout (V)",
-    lineColor: "#5cc9f5",
+    titleX: 'Total plate separation G (mm)',
+    titleY: 'Vout (V)',
+    xUnit: 'mm',
+    yUnit: 'V',
+    lineColor: '#5cc9f5',
     xLog: false,
   });
 
   drawChart(canvases.sensorCycle, cycleData.x, cycleData.va, {
-    titleX: "Time within cycle (µs)",
-    titleY: "Sensor node voltage (V)",
-    lineColor: "#7dd3fc",
+    titleX: 'Time within cycle (µs)',
+    titleY: 'Sensor node voltage (V)',
+    xUnit: 'µs',
+    yUnit: 'V',
+    lineColor: '#7dd3fc',
     xLog: false,
-    lineLabel: "Va",
+    lineLabel: 'Va',
     secondaryY: cycleData.vb,
-    secondaryColor: "#fbbf24",
-    secondaryLabel: "Vb",
+    secondaryColor: '#fbbf24',
+    secondaryLabel: 'Vb',
   });
 
   const solverTraceData = buildSolverTraceData(operatingPoint.trace || []);
   drawChart(canvases.solverTrace, solverTraceData.x, solverTraceData.v3, {
-    titleX: "Iteration",
-    titleY: "Voltage (V)",
-    lineColor: "#a78bfa",
+    titleX: 'Iteration',
+    titleY: 'Voltage (V)',
+    xUnit: 'iteration',
+    yUnit: 'V',
+    lineColor: '#a78bfa',
     xLog: false,
-    lineLabel: "V3",
+    lineLabel: 'V3',
     secondaryY: solverTraceData.vOut,
-    secondaryColor: "#ffb347",
-    secondaryLabel: "Vout",
+    secondaryColor: '#ffb347',
+    secondaryLabel: 'Vout',
   });
 
-  const residualScale = el.residualScale?.value === "log" ? "log" : "linear";
-  const residualData = buildSolverResidualData(operatingPoint.trace || [], residualScale);
+  const residualScale = el.residualScale?.value === 'log' ? 'log' : 'linear';
+  const residualData = buildSolverResidualData(
+    operatingPoint.trace || [],
+    residualScale,
+  );
   drawChart(canvases.solverResidual, residualData.x, residualData.y, {
-    titleX: "Iteration",
+    titleX: 'Iteration',
     titleY: residualData.yLabel,
-    lineColor: "#5cc9f5",
+    xUnit: 'iteration',
+    yUnit: residualScale === 'log' ? 'log10(V)' : 'V',
+    lineColor: '#5cc9f5',
     xLog: false,
     lineLabel: residualData.lineLabel,
   });
@@ -201,7 +226,7 @@ function positionToOffsetMm(position) {
 function offsetMmToPosition(offsetMm) {
   const totalGapMm = totalGapMmFromInput();
   if (totalGapMm <= 0) return 0.5;
-  return clamp(0.5 + (offsetMm / totalGapMm), 0, 1);
+  return clamp(0.5 + offsetMm / totalGapMm, 0, 1);
 }
 
 function syncPositionDisplays() {
@@ -225,24 +250,24 @@ function syncSliderFromOffsetInput() {
 function bindEvents() {
   const list = Object.entries(el).filter(([, node]) => Boolean(node));
   for (const [id, node] of list) {
-    if (id === "positionText" || id === "plateAreaInfo") continue;
+    if (id === 'positionText' || id === 'plateAreaInfo') continue;
 
-    node.addEventListener("input", () => {
-      if (id === "position") {
+    node.addEventListener('input', () => {
+      if (id === 'position') {
         syncPositionDisplays();
-      } else if (id === "positionOffsetMm") {
+      } else if (id === 'positionOffsetMm') {
         syncSliderFromOffsetInput();
-      } else if (id === "totalGapMm") {
+      } else if (id === 'totalGapMm') {
         syncPositionDisplays();
       }
       run();
     });
 
-    if (node.type !== "range") {
-      node.addEventListener("change", () => {
-        if (id === "positionOffsetMm") {
+    if (node.type !== 'range') {
+      node.addEventListener('change', () => {
+        if (id === 'positionOffsetMm') {
           syncSliderFromOffsetInput();
-        } else if (id === "totalGapMm") {
+        } else if (id === 'totalGapMm') {
           syncPositionDisplays();
         }
         run();
@@ -250,7 +275,7 @@ function bindEvents() {
     }
   }
 
-  window.addEventListener("resize", run);
+  window.addEventListener('resize', run);
 }
 
 setDefaults();

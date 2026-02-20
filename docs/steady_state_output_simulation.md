@@ -35,7 +35,7 @@ Instead, it is closer to:
 If the model effectively does:
 
 \[
-V_{\text{out}}[n+1] = V_{\text{out}}[n] + \Delta V
+V*{\text{out}}[n+1] = V*{\text{out}}[n] + \Delta V
 \]
 
 (or any equivalent “always add charge” formulation), it will **overpredict**, often by large factors.
@@ -85,20 +85,20 @@ At \(f=62.5\text{ kHz}\), the RC attenuation is significant:
 A useful approximation for the **clock component amplitude** at each node is:
 
 \[
-V(C)\approx \frac{V_{\text{clk}}}{1+\omega R C}
+V(C)\approx \frac{V\_{\text{clk}}}{1+\omega R C}
 \]
 
 So:
 
 \[
-V_a \approx \frac{V_{\text{clk}}}{1+\omega R C_a},\quad
-V_b \approx \frac{V_{\text{clk}}}{1+\omega R C_b}
+V*a \approx \frac{V*{\text{clk}}}{1+\omega R C*a},\quad
+V_b \approx \frac{V*{\text{clk}}}{1+\omega R C*b}
 \]
 \[
-\Delta V_{\text{in}} \equiv V_a - V_b
+\Delta V*{\text{in}} \equiv V_a - V_b
 \]
 
-Numerical example at \(x=0.1\text{ mm}\), with \(V_{\text{clk}}=5\text{ V}\):
+Numerical example at \(x=0.1\text{ mm}\), with \(V\_{\text{clk}}=5\text{ V}\):
 
 - \(\omega R C_a \approx 0.438\Rightarrow V_a\approx 5/1.438=3.48\text{ V}\)
 - \(\omega R C_b \approx 0.340\Rightarrow V_b\approx 5/1.340=3.73\text{ V}\)
@@ -106,10 +106,10 @@ Numerical example at \(x=0.1\text{ mm}\), with \(V_{\text{clk}}=5\text{ V}\):
 Thus:
 
 \[
-\Delta V_{\text{in}} \approx 3.48-3.73=-0.255\text{ V}
+\Delta V\_{\text{in}} \approx 3.48-3.73=-0.255\text{ V}
 \]
 
-**Debug checkpoint**: if your sim produces a much larger \(|\Delta V_{\text{in}}|\) (e.g., close to volts for 0.1 mm), you are likely driving Ca/Cb incorrectly (e.g., assuming full clock across the caps).
+**Debug checkpoint**: if your sim produces a much larger \(|\Delta V\_{\text{in}}|\) (e.g., close to volts for 0.1 mm), you are likely driving Ca/Cb incorrectly (e.g., assuming full clock across the caps).
 
 ---
 
@@ -117,31 +117,31 @@ Thus:
 
 A first-order model of the LTC1043 A section in this app circuit is:
 
-- In phase ϕ1, C3 is charged to \(\Delta V_{\text{in}}\)
+- In phase ϕ1, C3 is charged to \(\Delta V\_{\text{in}}\)
 - In phase ϕ2, C3 is connected to C4 → charge sharing
 - Therefore the output updates as:
 
 \[
-V_{\text{out}}[n+1]
+V*{\text{out}}[n+1]
 =
-\frac{C_4\,V_{\text{out}}[n] + C_3\,\Delta V_{\text{in}}}{C_3+C_4}
+\frac{C_4\,V*{\text{out}}[n] + C*3\,\Delta V*{\text{in}}}{C_3+C_4}
 \]
 
 This converges to a fixed point:
 
 \[
-V_{\text{out}}[\infty]
+V*{\text{out}}[\infty]
 =
-\frac{C_3}{C_3+C_4}\,\Delta V_{\text{in}}
+\frac{C_3}{C_3+C_4}\,\Delta V*{\text{in}}
 \]
 
 Given \(C_3=C_4=4.7\text{ nF}\):
 
 \[
-\alpha\equiv \frac{C_3}{C_3+C_4}=0.5
+\alpha\equiv \frac{C*3}{C_3+C_4}=0.5
 \]
 \[
-V_{\text{out}}[\infty]\approx 0.5\cdot(-0.255)=-0.128\text{ V}
+V*{\text{out}}[\infty]\approx 0.5\cdot(-0.255)=-0.128\text{ V}
 \]
 
 So at \(x=0.1\text{ mm}\):
@@ -160,11 +160,12 @@ This matches the app note claim (~1.25 V/mm) very closely.
 Your observed overshoot factor (~4.3×) is consistent with a combination of two common errors:
 
 ### 3.1 Missing charge-sharing attenuation (≈2× error)
+
 If you treat the transfer as “add ΔQ to C4” without accounting for C3 and C4 forming a parallel combination during transfer, you may effectively be using:
 
 **Wrong (pumping) update:**
 \[
-V_{\text{out}}[n+1] = V_{\text{out}}[n] + \frac{C_3}{C_4}\,\Delta V_{\text{in}}
+V*{\text{out}}[n+1] = V*{\text{out}}[n] + \frac{C*3}{C_4}\,\Delta V*{\text{in}}
 \]
 
 This makes Vout grow much larger than the true fixed point.
@@ -172,10 +173,11 @@ This makes Vout grow much larger than the true fixed point.
 In the intended behavior, \(C_3=C_4\) implies a **0.5 factor** from charge sharing. Dropping that can give ~2×.
 
 ### 3.2 Overestimating ΔVin because you assumed full clock swing (another ≈2× error)
+
 At 62.5 kHz with 20 kΩ and ~50 pF, the sensor nodes are around **3.6 V**, not 5 V.
 Also the **difference** between them is only a few hundred mV for 0.1 mm.
 
-If you instead assume Ca/Cb are driven by the full clock with no RC attenuation, \(|\Delta V_{\text{in}}|\) can be ~2× too large.
+If you instead assume Ca/Cb are driven by the full clock with no RC attenuation, \(|\Delta V\_{\text{in}}|\) can be ~2× too large.
 
 Together: ~2× · ~2× ≈ ~4× → close to your ~4.3×.
 
@@ -184,42 +186,47 @@ Together: ~2× · ~2× ≈ ~4× → close to your ~4.3×.
 ## 4) Additional failure modes to check
 
 ### (A) Using the “differential capacitance slope” as if it were per-capacitance slope
+
 Near center:
+
 - per-cap slope ≈ 61.7 pF/mm
 - differential slope (Ca - Cb) ≈ 123 pF/mm
 
 Mixing these can introduce a 2× error in the wrong place.
 
 ### (B) Units mistakes
+
 Common: mixing nF/pF, mm/m.
 
 Example: 4.7 nF = 4700 pF. If treated as 4.7 pF, the behavior changes radically.
 
 ### (C) Modeling the LTC1043 as transferring charge from a fixed reference each cycle
+
 In this application, internal switching references nodes to Vout/ground in alternating phases. If you model one phase as charging C3 to ΔVin relative to ground each time without respecting how Vout affects the next phase, you may create an artificial net pump.
 
 ---
 
 ## 5) Concrete debug recipe (minimal test harness)
 
-Implement and test this *standalone*:
+Implement and test this _standalone_:
 
 1. Given x, compute \(C_a(x)\), \(C_b(x)\)
-2. Compute \(\Delta V_{\text{in}} = V(C_a)-V(C_b)\) using
+2. Compute \(\Delta V*{\text{in}} = V(C_a)-V(C_b)\) using
    \[
-   V(C)=\frac{V_{\text{clk}}}{1+\omega RC}
+   V(C)=\frac{V*{\text{clk}}}{1+\omega RC}
    \]
 3. Iterate:
    \[
-   V_{\text{out}}[n+1]
+   V*{\text{out}}[n+1]
    =
-   \frac{C_4\,V_{\text{out}}[n] + C_3\,\Delta V_{\text{in}}}{C_3+C_4}
+   \frac{C_4\,V*{\text{out}}[n] + C*3\,\Delta V*{\text{in}}}{C_3+C_4}
    \]
    for e.g. N=200 cycles.
 
 Expected for x=0.1 mm (with the parameters above):
-- \(\Delta V_{\text{in}}\approx -0.255\text{ V}\)
-- \(V_{\text{out}}[\infty]\approx -0.128\text{ V}\)
+
+- \(\Delta V\_{\text{in}}\approx -0.255\text{ V}\)
+- \(V\_{\text{out}}[\infty]\approx -0.128\text{ V}\)
 
 If you can’t reproduce this with the minimal model, the bug is in your math/units.  
 If you can reproduce this, but your “full” simulator diverges, the bug is in the LTC1043 phase modeling (switch connections / reference nodes / sign conventions).
@@ -231,8 +238,8 @@ If you can reproduce this, but your “full” simulator diverges, the bug is in
 If you want another LLM (or me) to pinpoint the error precisely, paste:
 
 1. The exact per-cycle update equations for:
-    - how you compute charge on C3 in phase ϕ1
-    - how you transfer/share charge between C3 and C4 in phase ϕ2
+   - how you compute charge on C3 in phase ϕ1
+   - how you transfer/share charge between C3 and C4 in phase ϕ2
 2. Your model for the sensor nodes (whether you include R10/R11 attenuation)
 3. Your assumed clock amplitude and where it is applied (across caps or through R)
 

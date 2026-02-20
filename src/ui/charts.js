@@ -1,18 +1,18 @@
-import Chart from "chart.js/auto";
-import { shortFloat, shortHz } from "./format.js";
+import Chart from 'chart.js/auto';
+import { shortFloat, shortHz } from './format.js';
 
 const chartsByCanvas = new WeakMap();
 
 const noDataPlugin = {
-  id: "noDataLabel",
+  id: 'noDataLabel',
   afterDraw(chart, _args, opts) {
     if (!opts?.enabled) return;
     const { ctx, chartArea } = chart;
     if (!chartArea) return;
     ctx.save();
-    ctx.fillStyle = "#4a5a68";
+    ctx.fillStyle = '#4a5a68';
     ctx.font = "13px 'JetBrains Mono', Menlo, Consolas, monospace";
-    ctx.fillText("No data", chartArea.left + 8, chartArea.top + 18);
+    ctx.fillText('No data', chartArea.left + 8, chartArea.top + 18);
     ctx.restore();
   },
 };
@@ -63,6 +63,10 @@ function xBounds(points) {
   return { min, max };
 }
 
+function withUnit(valueText, unit) {
+  return unit ? `${valueText} ${unit}` : valueText;
+}
+
 export function drawChart(canvas, xVals, yVals, cfg) {
   if (!canvas) return;
 
@@ -75,10 +79,10 @@ export function drawChart(canvas, xVals, yVals, cfg) {
 
   const datasets = [
     {
-      label: cfg.lineLabel || "primary",
+      label: cfg.lineLabel || 'primary',
       data: primaryPoints,
-      borderColor: cfg.lineColor || "#00e68a",
-      backgroundColor: cfg.lineColor || "#00e68a",
+      borderColor: cfg.lineColor || '#00e68a',
+      backgroundColor: cfg.lineColor || '#00e68a',
       borderWidth: 2,
       pointRadius: 0,
       pointHoverRadius: 0,
@@ -89,10 +93,10 @@ export function drawChart(canvas, xVals, yVals, cfg) {
 
   if (secondaryPoints.length || Array.isArray(cfg.secondaryY)) {
     datasets.push({
-      label: cfg.secondaryLabel || "secondary",
+      label: cfg.secondaryLabel || 'secondary',
       data: secondaryPoints,
-      borderColor: cfg.secondaryColor || "#ffb347",
-      backgroundColor: cfg.secondaryColor || "#ffb347",
+      borderColor: cfg.secondaryColor || '#ffb347',
+      backgroundColor: cfg.secondaryColor || '#ffb347',
       borderWidth: 2,
       pointRadius: 0,
       pointHoverRadius: 0,
@@ -103,7 +107,7 @@ export function drawChart(canvas, xVals, yVals, cfg) {
 
   const hasNamedLegend = Boolean(cfg.lineLabel || cfg.secondaryLabel);
   const chartConfig = {
-    type: "line",
+    type: 'line',
     data: { datasets },
     options: {
       animation: false,
@@ -112,14 +116,14 @@ export function drawChart(canvas, xVals, yVals, cfg) {
       parsing: false,
       normalized: true,
       interaction: {
-        mode: "nearest",
+        mode: 'nearest',
         intersect: false,
       },
       plugins: {
         legend: {
           display: hasNamedLegend,
           labels: {
-            color: "#6b7f8e",
+            color: '#6b7f8e',
             boxWidth: 12,
             boxHeight: 2,
             font: {
@@ -132,13 +136,16 @@ export function drawChart(canvas, xVals, yVals, cfg) {
           callbacks: {
             title(items) {
               const x = items?.[0]?.parsed?.x;
-              if (!Number.isFinite(x)) return "";
-              return cfg.xLog ? shortHz(x) : shortFloat(x);
+              if (!Number.isFinite(x)) return '';
+              const xValue = cfg.xLog ? shortHz(x) : shortFloat(x);
+              return withUnit(xValue, cfg.xUnit);
             },
             label(item) {
               const value = item?.parsed?.y;
-              if (!Number.isFinite(value)) return "";
-              return `${item.dataset.label}: ${shortFloat(value)}`;
+              if (!Number.isFinite(value)) return '';
+              const yText = withUnit(shortFloat(value), cfg.yUnit);
+              if (item.dataset.label) return `${item.dataset.label}: ${yText}`;
+              return yText;
             },
           },
         },
@@ -148,20 +155,20 @@ export function drawChart(canvas, xVals, yVals, cfg) {
       },
       scales: {
         x: {
-          type: cfg.xLog ? "logarithmic" : "linear",
+          type: cfg.xLog ? 'logarithmic' : 'linear',
           min: combinedX?.min,
           max: combinedX?.max,
           title: {
             display: true,
-            text: cfg.titleX || "",
-            color: "#5a6e7e",
+            text: cfg.titleX || '',
+            color: '#5a6e7e',
             font: {
               family: "'DM Sans', system-ui, sans-serif",
               size: 11,
             },
           },
           ticks: {
-            color: "#4a5a68",
+            color: '#4a5a68',
             maxTicksLimit: cfg.xLog ? 7 : 6,
             callback(value) {
               const v = Number(value);
@@ -173,27 +180,27 @@ export function drawChart(canvas, xVals, yVals, cfg) {
             },
           },
           border: {
-            color: "#243040",
+            color: '#243040',
           },
           grid: {
-            color: "#1a2430",
+            color: '#1a2430',
           },
         },
         y: {
-          type: "linear",
+          type: 'linear',
           min: bounds.min,
           max: bounds.max,
           title: {
             display: true,
-            text: cfg.titleY || "",
-            color: "#5a6e7e",
+            text: cfg.titleY || '',
+            color: '#5a6e7e',
             font: {
               family: "'DM Sans', system-ui, sans-serif",
               size: 11,
             },
           },
           ticks: {
-            color: "#4a5a68",
+            color: '#4a5a68',
             callback(value) {
               return shortFloat(Number(value));
             },
@@ -203,10 +210,10 @@ export function drawChart(canvas, xVals, yVals, cfg) {
             },
           },
           border: {
-            color: "#243040",
+            color: '#243040',
           },
           grid: {
-            color: "#1a2430",
+            color: '#1a2430',
           },
         },
       },
@@ -217,11 +224,11 @@ export function drawChart(canvas, xVals, yVals, cfg) {
   if (existing) {
     existing.config.data = chartConfig.data;
     existing.config.options = chartConfig.options;
-    existing.update("none");
+    existing.update('none');
     return;
   }
 
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const chart = new Chart(ctx, chartConfig);
   chartsByCanvas.set(canvas, chart);

@@ -1,8 +1,8 @@
-import { DEFAULT_INPUTS } from "./defaults.mjs";
-import { solveGeometry } from "./geometry.mjs";
+import { DEFAULT_INPUTS } from './defaults.mjs';
+import { solveGeometry } from './geometry.mjs';
 
 function assertFiniteNumber(name, value) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new TypeError(`${name} must be a finite number`);
   }
 }
@@ -28,20 +28,20 @@ export function solveSensorNodeVoltages({
   ccF,
   omega,
 }) {
-  assertFiniteNumber("vDrivePeakV", vDrivePeakV);
-  assertFiniteNumber("r10Ohm", r10Ohm);
-  assertFiniteNumber("r11Ohm", r11Ohm);
-  assertFiniteNumber("caF", caF);
-  assertFiniteNumber("cbF", cbF);
-  assertFiniteNumber("ccF", ccF);
-  assertFiniteNumber("omega", omega);
+  assertFiniteNumber('vDrivePeakV', vDrivePeakV);
+  assertFiniteNumber('r10Ohm', r10Ohm);
+  assertFiniteNumber('r11Ohm', r11Ohm);
+  assertFiniteNumber('caF', caF);
+  assertFiniteNumber('cbF', cbF);
+  assertFiniteNumber('ccF', ccF);
+  assertFiniteNumber('omega', omega);
 
-  assertPositive("r10Ohm", r10Ohm);
-  assertPositive("r11Ohm", r11Ohm);
-  assertNonNegative("caF", caF);
-  assertNonNegative("cbF", cbF);
-  assertNonNegative("ccF", ccF);
-  assertNonNegative("omega", omega);
+  assertPositive('r10Ohm', r10Ohm);
+  assertPositive('r11Ohm', r11Ohm);
+  assertNonNegative('caF', caF);
+  assertNonNegative('cbF', cbF);
+  assertNonNegative('ccF', ccF);
+  assertNonNegative('omega', omega);
 
   const g10 = 1 / Math.max(r10Ohm, 1e-18);
   const g11 = 1 / Math.max(r11Ohm, 1e-18);
@@ -59,8 +59,10 @@ export function solveSensorNodeVoltages({
 
   const det = a11 * a22 - a12 * a21;
   if (!Number.isFinite(det) || Math.abs(det) < 1e-30) {
-    const vaFallback = vDrivePeakV / (1 + Math.max(omega, 0) * r10Ohm * Math.max(caF, 0));
-    const vbFallback = vDrivePeakV / (1 + Math.max(omega, 0) * r11Ohm * Math.max(cbF, 0));
+    const vaFallback =
+      vDrivePeakV / (1 + Math.max(omega, 0) * r10Ohm * Math.max(caF, 0));
+    const vbFallback =
+      vDrivePeakV / (1 + Math.max(omega, 0) * r11Ohm * Math.max(cbF, 0));
     return { vaNodeV: vaFallback, vbNodeV: vbFallback };
   }
 
@@ -78,7 +80,10 @@ export function simulateSensorNodeWaveform(input, options = {}) {
   const halfPeriodS = periodS / 2;
   const driveV = inputs.vDrivePeakV;
 
-  const pointsPerCycle = Math.max(80, Math.round(options.pointsPerCycle ?? 360));
+  const pointsPerCycle = Math.max(
+    80,
+    Math.round(options.pointsPerCycle ?? 360),
+  );
   const stepsPerHalf = Math.max(40, Math.floor(pointsPerCycle / 2));
   const warmupCycles = Math.max(1, Math.round(options.warmupCycles ?? 40));
   const dtS = halfPeriodS / stepsPerHalf;

@@ -1,13 +1,13 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import test from 'node:test';
+import assert from 'node:assert/strict';
 import {
   cycleStep,
   solvePeriodicSteadyState,
-} from "../../src/model/charge-transfer.mjs";
-import { DEFAULT_SOLVER } from "../../src/model/defaults.mjs";
-import { nearAbs, runCases } from "../helpers/assertions.mjs";
+} from '../../src/model/charge-transfer.mjs';
+import { DEFAULT_SOLVER } from '../../src/model/defaults.mjs';
+import { nearAbs, runCases } from '../helpers/assertions.mjs';
 
-test("cycleStep follows expected charge-sharing update without clamp", () => {
+test('cycleStep follows expected charge-sharing update without clamp', () => {
   const step = cycleStep(
     { v3: 0, v4: 0.2 },
     {
@@ -22,12 +22,12 @@ test("cycleStep follows expected charge-sharing update without clamp", () => {
     },
   );
 
-  nearAbs(step.qTransferC, 0.24, 1e-12, "qTransfer");
-  nearAbs(step.state.v3, 0.28, 1e-12, "v3");
-  nearAbs(step.state.v4, 0.18, 1e-12, "v4");
+  nearAbs(step.qTransferC, 0.24, 1e-12, 'qTransfer');
+  nearAbs(step.state.v3, 0.28, 1e-12, 'v3');
+  nearAbs(step.state.v4, 0.18, 1e-12, 'v4');
 });
 
-test("cycleStep applies output clamp when enabled", () => {
+test('cycleStep applies output clamp when enabled', () => {
   const step = cycleStep(
     { v3: 0, v4: 0.2 },
     {
@@ -42,10 +42,10 @@ test("cycleStep applies output clamp when enabled", () => {
     },
   );
 
-  nearAbs(step.state.v4, 0.1, 1e-12, "clamped v4");
+  nearAbs(step.state.v4, 0.1, 1e-12, 'clamped v4');
 });
 
-test("solvePeriodicSteadyState closed-form matches analytic fixed point", () => {
+test('solvePeriodicSteadyState closed-form matches analytic fixed point', () => {
   const derived = {
     c3F: 4.7e-9,
     c4F: 4.7e-9,
@@ -61,10 +61,10 @@ test("solvePeriodicSteadyState closed-form matches analytic fixed point", () => 
   const expectedV4 = (k * v3Drive - derived.deltaVBiasPerCycleV) / k;
 
   assert.equal(solved.converged, true);
-  nearAbs(solved.state.v4, expectedV4, 1e-12, "steady v4");
+  nearAbs(solved.state.v4, expectedV4, 1e-12, 'steady v4');
 });
 
-test("solvePeriodicSteadyState closed-form trace sampling keeps transient history", () => {
+test('solvePeriodicSteadyState closed-form trace sampling keeps transient history', () => {
   const solved = solvePeriodicSteadyState(
     {
       c3F: 4.7e-9,
@@ -82,7 +82,7 @@ test("solvePeriodicSteadyState closed-form trace sampling keeps transient histor
   assert.equal(solved.trace.at(-1).iteration, solved.trace.length);
 });
 
-test("solvePeriodicSteadyState uses iterative path and converges when transferGain=0", () => {
+test('solvePeriodicSteadyState uses iterative path and converges when transferGain=0', () => {
   const solved = solvePeriodicSteadyState(
     {
       c3F: 1,
@@ -104,7 +104,7 @@ test("solvePeriodicSteadyState uses iterative path and converges when transferGa
   assert.ok(solved.iterations >= 2, `iterations=${solved.iterations}`);
 });
 
-test("solvePeriodicSteadyState iterative path reports non-convergence", () => {
+test('solvePeriodicSteadyState iterative path reports non-convergence', () => {
   const solved = solvePeriodicSteadyState(
     {
       c3F: 1,
@@ -128,33 +128,12 @@ test("solvePeriodicSteadyState iterative path reports non-convergence", () => {
   assert.equal(solved.trace.length, 3);
 });
 
-test("cycleStep throws for invalid state/derived contracts", () => {
+test('cycleStep throws for invalid state/derived contracts', () => {
+  assert.throws(() => cycleStep(null, {}), TypeError);
   assert.throws(
-    () => cycleStep(null, {}),
-    TypeError,
-  );
-  assert.throws(
-    () => cycleStep({ v3: 0, v4: Number.NaN }, {
-      c3F: 1,
-      c4F: 1,
-      c3SampleV: 0.2,
-      deltaVBiasPerCycleV: 0,
-      transferGain: 1,
-      useClamp: false,
-      clampMinV: -1,
-      clampMaxV: 1,
-    }),
-    TypeError,
-  );
-
-  runCases([
-    { key: "c3F", value: 0 },
-    { key: "c4F", value: -1 },
-    { key: "clampMinV", value: 2, clampMaxV: 1 },
-  ], ({ key, value, clampMaxV = 1 }) => {
-    assert.throws(
-      () => cycleStep(
-        { v3: 0, v4: 0 },
+    () =>
+      cycleStep(
+        { v3: 0, v4: Number.NaN },
         {
           c3F: 1,
           c4F: 1,
@@ -163,109 +142,134 @@ test("cycleStep throws for invalid state/derived contracts", () => {
           transferGain: 1,
           useClamp: false,
           clampMinV: -1,
-          clampMaxV,
-          [key]: value,
+          clampMaxV: 1,
         },
       ),
-      RangeError,
-      `expected RangeError for ${key}`,
-    );
-  });
+    TypeError,
+  );
+
+  runCases(
+    [
+      { key: 'c3F', value: 0 },
+      { key: 'c4F', value: -1 },
+      { key: 'clampMinV', value: 2, clampMaxV: 1 },
+    ],
+    ({ key, value, clampMaxV = 1 }) => {
+      assert.throws(
+        () =>
+          cycleStep(
+            { v3: 0, v4: 0 },
+            {
+              c3F: 1,
+              c4F: 1,
+              c3SampleV: 0.2,
+              deltaVBiasPerCycleV: 0,
+              transferGain: 1,
+              useClamp: false,
+              clampMinV: -1,
+              clampMaxV,
+              [key]: value,
+            },
+          ),
+        RangeError,
+        `expected RangeError for ${key}`,
+      );
+    },
+  );
 
   assert.throws(
-    () => cycleStep(
-      { v3: 0, v4: 0 },
-      {
-        c3F: 1,
-        c4F: 1,
-        c3SampleV: 0.2,
-        deltaVBiasPerCycleV: 0,
-        transferGain: 1,
-        useClamp: "yes",
-        clampMinV: -1,
-        clampMaxV: 1,
-      },
-    ),
+    () =>
+      cycleStep(
+        { v3: 0, v4: 0 },
+        {
+          c3F: 1,
+          c4F: 1,
+          c3SampleV: 0.2,
+          deltaVBiasPerCycleV: 0,
+          transferGain: 1,
+          useClamp: 'yes',
+          clampMinV: -1,
+          clampMaxV: 1,
+        },
+      ),
     TypeError,
   );
-  assert.throws(
-    () => cycleStep({ v3: 0, v4: 0 }, null),
-    TypeError,
-  );
+  assert.throws(() => cycleStep({ v3: 0, v4: 0 }, null), TypeError);
 });
 
-test("solvePeriodicSteadyState throws for invalid solver contract", () => {
+test('solvePeriodicSteadyState throws for invalid solver contract', () => {
   assert.throws(
-    () => solvePeriodicSteadyState(
-      {
-        c3F: 1,
-        c4F: 1,
-        c3SampleV: 0.2,
-        deltaVBiasPerCycleV: 0,
-      },
-      null,
-      { ...DEFAULT_SOLVER, maxIter: 0 },
-    ),
+    () =>
+      solvePeriodicSteadyState(
+        {
+          c3F: 1,
+          c4F: 1,
+          c3SampleV: 0.2,
+          deltaVBiasPerCycleV: 0,
+        },
+        null,
+        { ...DEFAULT_SOLVER, maxIter: 0 },
+      ),
     RangeError,
   );
   assert.throws(
-    () => solvePeriodicSteadyState(
-      {
-        c3F: 1,
-        c4F: 1,
-        c3SampleV: 0.2,
-        deltaVBiasPerCycleV: 0,
-      },
-      null,
-      { ...DEFAULT_SOLVER, useOutputClamp: 1 },
-    ),
+    () =>
+      solvePeriodicSteadyState(
+        {
+          c3F: 1,
+          c4F: 1,
+          c3SampleV: 0.2,
+          deltaVBiasPerCycleV: 0,
+        },
+        null,
+        { ...DEFAULT_SOLVER, useOutputClamp: 1 },
+      ),
     TypeError,
   );
   assert.throws(
-    () => solvePeriodicSteadyState(
-      {
-        c3F: 1,
-        c4F: 1,
-        c3SampleV: 0.2,
-        deltaVBiasPerCycleV: 0,
-      },
-      null,
-      { ...DEFAULT_SOLVER, tolV: -1 },
-    ),
+    () =>
+      solvePeriodicSteadyState(
+        {
+          c3F: 1,
+          c4F: 1,
+          c3SampleV: 0.2,
+          deltaVBiasPerCycleV: 0,
+        },
+        null,
+        { ...DEFAULT_SOLVER, tolV: -1 },
+      ),
     RangeError,
   );
   assert.throws(
-    () => solvePeriodicSteadyState(
-      {
-        c3F: 1,
-        c4F: 1,
-        c3SampleV: 0.2,
-        deltaVBiasPerCycleV: 0,
-      },
-      null,
-      null,
-    ),
+    () =>
+      solvePeriodicSteadyState(
+        {
+          c3F: 1,
+          c4F: 1,
+          c3SampleV: 0.2,
+          deltaVBiasPerCycleV: 0,
+        },
+        null,
+        null,
+      ),
     TypeError,
   );
   assert.throws(
-    () => solvePeriodicSteadyState(
-      null,
-      null,
-      DEFAULT_SOLVER,
-    ),
+    () => solvePeriodicSteadyState(null, null, DEFAULT_SOLVER),
     TypeError,
   );
   assert.throws(
-    () => solvePeriodicSteadyState(
-      {
-        c3F: 1,
-        c4F: 1,
-        c3SampleV: 0.2,
-        deltaVBiasPerCycleV: 0,
-      },
-      { v3: 0, v4: Number.NaN },
-      DEFAULT_SOLVER,
-    ),
+    () =>
+      solvePeriodicSteadyState(
+        {
+          c3F: 1,
+          c4F: 1,
+          c3SampleV: 0.2,
+          deltaVBiasPerCycleV: 0,
+        },
+        { v3: 0, v4: Number.NaN },
+        DEFAULT_SOLVER,
+      ),
     TypeError,
   );
 });

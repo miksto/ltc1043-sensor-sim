@@ -7,68 +7,78 @@ import {
   fmtSec,
   fmtVolt,
   pctDelta,
-} from "./format.js";
+} from './format.js';
 
 export function renderMetrics(metricsEl, warningsEl, res) {
   const sections = [
     {
-      title: "Sensor Geometry",
+      title: 'Sensor Geometry',
       items: [
-        ["Left gap dL", `${(res.dLeftM * 1e3).toFixed(4)} mm`],
-        ["Right gap dR", `${(res.dRightM * 1e3).toFixed(4)} mm`],
-        ["Ca", fmtCap(res.caF)],
-        ["Cb", fmtCap(res.cbF)],
-        ["ΔC = Ca-Cb", fmtCap(res.deltaCF)],
+        ['Left gap dL', `${(res.dLeftM * 1e3).toFixed(4)} mm`],
+        ['Right gap dR', `${(res.dRightM * 1e3).toFixed(4)} mm`],
+        ['Ca', fmtCap(res.caF)],
+        ['Cb', fmtCap(res.cbF)],
+        ['ΔC = Ca-Cb', fmtCap(res.deltaCF)],
       ],
     },
     {
-      title: "Charge Transfer",
+      title: 'Charge Transfer',
       items: [
-        ["Va node (RC atten.)", fmtVolt(res.vaNodeV)],
-        ["Vb node (RC atten.)", fmtVolt(res.vbNodeV)],
-        ["ΔVin = Va - Vb", fmtVolt(res.deltaVinV)],
-        ["Q_sample on C3", fmtCharge(res.qSampleOnC3C ?? res.qPacketC)],
-        ["Q_transfer/cycle (signed)", fmtCharge(res.qToC4C)],
-        ["Op-amp input bias", fmtCurrent(res.iBiasA)],
-        ["ΔV_bias/cycle on C4", fmtVolt(res.deltaVBiasPerCycleV)],
-        ["V3 steady (internal)", fmtVolt(res.v3SteadyV)],
+        ['Va node (RC atten.)', fmtVolt(res.vaNodeV)],
+        ['Vb node (RC atten.)', fmtVolt(res.vbNodeV)],
+        ['ΔVin = Va - Vb', fmtVolt(res.deltaVinV)],
+        ['Q_sample on C3', fmtCharge(res.qSampleOnC3C ?? res.qPacketC)],
+        ['Q_transfer/cycle (signed)', fmtCharge(res.qToC4C)],
+        ['Op-amp input bias', fmtCurrent(res.iBiasA)],
+        ['ΔV_bias/cycle on C4', fmtVolt(res.deltaVBiasPerCycleV)],
+        ['V3 steady (internal)', fmtVolt(res.v3SteadyV)],
       ],
     },
     {
-      title: "Output And Timing",
+      title: 'Output And Timing',
       items: [
-        ["Vout steady", fmtVolt(res.vOutSteadyV)],
-        ["τA ≈ R10·Ca (heuristic)", fmtSec(res.tauAS)],
-        ["τB ≈ R11·Cb (heuristic)", fmtSec(res.tauBS)],
-        ["f_max for full-charge (5τ rule)", fmtHz(res.fWarningThresholdHz)],
+        ['Vout steady', fmtVolt(res.vOutSteadyV)],
+        ['τA ≈ R10·Ca (heuristic)', fmtSec(res.tauAS)],
+        ['τB ≈ R11·Cb (heuristic)', fmtSec(res.tauBS)],
+        ['f_max for full-charge (5τ rule)', fmtHz(res.fWarningThresholdHz)],
       ],
     },
     {
-      title: "Solver Diagnostics",
+      title: 'Solver Diagnostics',
       items: [
-        ["Solver iterations", String(res.solverIterations)],
-        ["Solver residual", fmtVolt(res.solverResidualV)],
-        ["Solver converged", res.solverConverged ? "yes" : "no", res.solverConverged ? "good" : "bad"],
+        ['Solver iterations', String(res.solverIterations)],
+        ['Solver residual', fmtVolt(res.solverResidualV)],
+        [
+          'Solver converged',
+          res.solverConverged ? 'yes' : 'no',
+          res.solverConverged ? 'good' : 'bad',
+        ],
       ],
     },
   ];
 
-  metricsEl.innerHTML = `<div class="metrics-sections">${
-    sections.map((section) => `
+  metricsEl.innerHTML = `<div class="metrics-sections">${sections
+    .map(
+      (section) => `
       <section class="metric-section">
         <h3>${escapeHtml(section.title)}</h3>
         <div class="metrics-grid">
-          ${section.items.map((item) => `
+          ${section.items
+            .map(
+              (item) => `
             <div class="metric">
               <div class="k">${escapeHtml(item[0])}</div>
-              <div class="v ${item[2] || ""}">${escapeHtml(item[1])}</div>
-            </div>`).join("")}
+              <div class="v ${item[2] || ''}">${escapeHtml(item[1])}</div>
+            </div>`,
+            )
+            .join('')}
         </div>
-      </section>`).join("")
-  }</div>`;
+      </section>`,
+    )
+    .join('')}</div>`;
 
   if (res.warnings.length > 0) {
-    warningsEl.innerHTML = `<div class="warn">${escapeHtml(res.warnings.join(" "))}</div>`;
+    warningsEl.innerHTML = `<div class="warn">${escapeHtml(res.warnings.join(' '))}</div>`;
   } else {
     warningsEl.innerHTML = `<div class="ok">Full-charge assumption check: OK at current frequency.</div>`;
   }
@@ -118,26 +128,30 @@ export function renderValidation(validationRowsEl, simulate, baseInputs, ref) {
 
   const rows = [
     {
-      k: "Centered capacitance (doc fixture)",
+      k: 'Centered capacitance (doc fixture)',
       c: `${(centeredDoc.caF * 1e12).toFixed(3)} pF`,
       r: `${ref.centeredCapPF.toFixed(1)} pF (${pctDelta(centeredDoc.caF * 1e12, ref.centeredCapPF)})`,
     },
     {
-      k: "Local slope dVout/dx (doc fixture)",
+      k: 'Local slope dVout/dx (doc fixture)',
       c: `${slopeDocVPerMm.toFixed(4)} V/mm`,
       r: `${ref.slopeVPerMm.toFixed(2)} V/mm (${pctDelta(slopeDocVPerMm, ref.slopeVPerMm)})`,
     },
     {
-      k: "Local slope dVout/dx (current inputs)",
+      k: 'Local slope dVout/dx (current inputs)',
       c: `${slopeCurrentVPerMm.toFixed(4)} V/mm`,
-      r: "n/a (depends on current parameter values)",
+      r: 'n/a (depends on current parameter values)',
     },
   ];
 
-  validationRowsEl.innerHTML = rows.map((row) => `
+  validationRowsEl.innerHTML = rows
+    .map(
+      (row) => `
     <div class="row">
       <div>${escapeHtml(row.k)}</div>
       <div>${escapeHtml(row.c)}</div>
       <div>${escapeHtml(row.r)}</div>
-    </div>`).join("");
+    </div>`,
+    )
+    .join('');
 }

@@ -15,7 +15,10 @@ export function toPos(v, fallback) {
 export function shortFloat(v) {
   const a = Math.abs(v);
   if (a >= 1e4 || (a > 0 && a < 1e-3)) return v.toExponential(2);
-  return v.toFixed(3).replace(/\.0+$/, "").replace(/(\.[0-9]*?)0+$/, "$1");
+  return v
+    .toFixed(3)
+    .replace(/\.0+$/, '')
+    .replace(/(\.[0-9]*?)0+$/, '$1');
 }
 
 export function shortHz(v) {
@@ -76,17 +79,18 @@ export function fmtCurrent(v) {
 }
 
 export function pctDelta(calc, ref) {
-  if (!Number.isFinite(calc) || !Number.isFinite(ref) || ref === 0) return "n/a";
+  if (!Number.isFinite(calc) || !Number.isFinite(ref) || ref === 0)
+    return 'n/a';
   const d = ((calc - ref) / ref) * 100;
-  const s = d >= 0 ? "+" : "";
+  const s = d >= 0 ? '+' : '';
   return `${s}${d.toFixed(2)}%`;
 }
 
 export function escapeHtml(s) {
   return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

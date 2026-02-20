@@ -1,17 +1,17 @@
-import { DEFAULT_SOLVER } from "./defaults.mjs";
+import { DEFAULT_SOLVER } from './defaults.mjs';
 
 export function clamp(v, lo, hi) {
   return Math.min(hi, Math.max(lo, v));
 }
 
 function assertFiniteNumber(name, value) {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new TypeError(`${name} must be a finite number`);
   }
 }
 
 function assertBoolean(name, value) {
-  if (typeof value !== "boolean") {
+  if (typeof value !== 'boolean') {
     throw new TypeError(`${name} must be a boolean`);
   }
 }
@@ -36,8 +36,8 @@ function validateClampBounds(minV, maxV, minName, maxName) {
   }
 }
 
-function validateState(state, name = "state") {
-  if (!state || typeof state !== "object") {
+function validateState(state, name = 'state') {
+  if (!state || typeof state !== 'object') {
     throw new TypeError(`${name} must be an object`);
   }
   assertFiniteNumber(`${name}.v3`, state.v3);
@@ -45,28 +45,31 @@ function validateState(state, name = "state") {
 }
 
 function validateDerived(derived) {
-  if (!derived || typeof derived !== "object") {
-    throw new TypeError("derived must be an object");
+  if (!derived || typeof derived !== 'object') {
+    throw new TypeError('derived must be an object');
   }
-  assertFiniteNumber("derived.c3F", derived.c3F);
-  assertFiniteNumber("derived.c4F", derived.c4F);
-  assertFiniteNumber("derived.c3SampleV", derived.c3SampleV);
-  assertFiniteNumber("derived.deltaVBiasPerCycleV", derived.deltaVBiasPerCycleV);
-  assertFiniteNumber("derived.transferGain", derived.transferGain);
-  assertBoolean("derived.useClamp", derived.useClamp);
-  assertPositive("derived.c3F", derived.c3F);
-  assertPositive("derived.c4F", derived.c4F);
+  assertFiniteNumber('derived.c3F', derived.c3F);
+  assertFiniteNumber('derived.c4F', derived.c4F);
+  assertFiniteNumber('derived.c3SampleV', derived.c3SampleV);
+  assertFiniteNumber(
+    'derived.deltaVBiasPerCycleV',
+    derived.deltaVBiasPerCycleV,
+  );
+  assertFiniteNumber('derived.transferGain', derived.transferGain);
+  assertBoolean('derived.useClamp', derived.useClamp);
+  assertPositive('derived.c3F', derived.c3F);
+  assertPositive('derived.c4F', derived.c4F);
   validateClampBounds(
     derived.clampMinV,
     derived.clampMaxV,
-    "derived.clampMinV",
-    "derived.clampMaxV",
+    'derived.clampMinV',
+    'derived.clampMaxV',
   );
 }
 
 function normalizeSolver(solver) {
-  if (!solver || typeof solver !== "object") {
-    throw new TypeError("solver must be an object");
+  if (!solver || typeof solver !== 'object') {
+    throw new TypeError('solver must be an object');
   }
 
   const normalized = {
@@ -79,28 +82,28 @@ function normalizeSolver(solver) {
     collectTrace: solver.collectTrace,
   };
 
-  assertFiniteNumber("solver.tolV", normalized.tolV);
-  assertNonNegative("solver.tolV", normalized.tolV);
-  assertFiniteNumber("solver.maxIter", normalized.maxIter);
+  assertFiniteNumber('solver.tolV', normalized.tolV);
+  assertNonNegative('solver.tolV', normalized.tolV);
+  assertFiniteNumber('solver.maxIter', normalized.maxIter);
   if (!Number.isInteger(normalized.maxIter) || normalized.maxIter < 1) {
-    throw new RangeError("solver.maxIter must be an integer >= 1");
+    throw new RangeError('solver.maxIter must be an integer >= 1');
   }
-  assertFiniteNumber("solver.transferGain", normalized.transferGain);
-  assertBoolean("solver.useOutputClamp", normalized.useOutputClamp);
-  assertBoolean("solver.collectTrace", normalized.collectTrace);
+  assertFiniteNumber('solver.transferGain', normalized.transferGain);
+  assertBoolean('solver.useOutputClamp', normalized.useOutputClamp);
+  assertBoolean('solver.collectTrace', normalized.collectTrace);
   validateClampBounds(
     normalized.clampMinV,
     normalized.clampMaxV,
-    "solver.clampMinV",
-    "solver.clampMaxV",
+    'solver.clampMinV',
+    'solver.clampMaxV',
   );
 
   return normalized;
 }
 
 function normalizeDerivedForSolver(derived, solver) {
-  if (!derived || typeof derived !== "object") {
-    throw new TypeError("derived must be an object");
+  if (!derived || typeof derived !== 'object') {
+    throw new TypeError('derived must be an object');
   }
 
   const normalized = {
@@ -138,14 +141,21 @@ export function cycleStep(state, derived) {
   const effectiveC3DriveV = chargeSharingRatio * sampledC3VoltageV;
 
   const transferEqCapF = (c3F * c4F) / Math.max(c3F + c4F, 1e-18);
-  const qTransferC = transferGain * transferEqCapF * (effectiveC3DriveV - outputCapVoltageBeforeV);
+  const qTransferC =
+    transferGain *
+    transferEqCapF *
+    (effectiveC3DriveV - outputCapVoltageBeforeV);
   const c3VoltageAfterShareV = effectiveC3DriveV - qTransferC / c3F;
   let outputCapVoltageAfterV = outputCapVoltageBeforeV + qTransferC / c4F;
   outputCapVoltageAfterV -= deltaVBiasPerCycleV;
   const qSensorC = c3F * sampledC3VoltageV;
 
   if (useClamp) {
-    outputCapVoltageAfterV = clamp(outputCapVoltageAfterV, clampMinV, clampMaxV);
+    outputCapVoltageAfterV = clamp(
+      outputCapVoltageAfterV,
+      clampMinV,
+      clampMaxV,
+    );
   }
 
   return {
@@ -155,14 +165,25 @@ export function cycleStep(state, derived) {
   };
 }
 
-export function solvePeriodicSteadyState(derived, initialState = null, solver = DEFAULT_SOLVER) {
+export function solvePeriodicSteadyState(
+  derived,
+  initialState = null,
+  solver = DEFAULT_SOLVER,
+) {
   const normalizedSolver = normalizeSolver(solver);
   if (initialState !== null) {
-    validateState(initialState, "initialState");
+    validateState(initialState, 'initialState');
   }
-  const normalizedDerived = normalizeDerivedForSolver(derived, normalizedSolver);
+  const normalizedDerived = normalizeDerivedForSolver(
+    derived,
+    normalizedSolver,
+  );
 
-  const closedForm = solveClosedFormSteadyState(normalizedDerived, initialState, normalizedSolver);
+  const closedForm = solveClosedFormSteadyState(
+    normalizedDerived,
+    initialState,
+    normalizedSolver,
+  );
   if (closedForm) {
     if (normalizedSolver.collectTrace) {
       const traceSampled = sampleTransientTrace(
@@ -180,16 +201,15 @@ export function solvePeriodicSteadyState(derived, initialState = null, solver = 
     }
     return closedForm;
   }
-  return solvePeriodicSteadyStateIterative(normalizedDerived, initialState, normalizedSolver);
+  return solvePeriodicSteadyStateIterative(
+    normalizedDerived,
+    initialState,
+    normalizedSolver,
+  );
 }
 
 function solveClosedFormSteadyState(derived, initialState, solver) {
-  const {
-    c3F,
-    c4F,
-    c3SampleV,
-    deltaVBiasPerCycleV,
-  } = derived;
+  const { c3F, c4F, c3SampleV, deltaVBiasPerCycleV } = derived;
 
   const transferGain = solver.transferGain;
   const cSum = c3F + c4F;
@@ -210,7 +230,8 @@ function solveClosedFormSteadyState(derived, initialState, solver) {
   }
 
   const mapped = applyAffineMap(v4Steady, a, b, solver);
-  if (!Number.isFinite(mapped) || Math.abs(mapped - v4Steady) > 1e-10) return null;
+  if (!Number.isFinite(mapped) || Math.abs(mapped - v4Steady) > 1e-10)
+    return null;
 
   const cEqF = (c3F * c4F) / Math.max(cSum, 1e-18);
   const qTransferC = transferGain * cEqF * (v3Drive - v4Steady);
@@ -257,7 +278,10 @@ function sampleTransientTrace(derived, initialState, solver, targetState) {
     const prevV4 = state.v4;
     const step = cycleStep(state, derived);
     state = step.state;
-    residualV = Math.max(Math.abs(state.v3 - prevV3), Math.abs(state.v4 - prevV4));
+    residualV = Math.max(
+      Math.abs(state.v3 - prevV3),
+      Math.abs(state.v4 - prevV4),
+    );
     trace.push({
       iteration: i + 1,
       v3: state.v3,
@@ -267,7 +291,9 @@ function sampleTransientTrace(derived, initialState, solver, targetState) {
 
     if (targetState && i + 1 >= minTraceIterations) {
       const scaleV4 = Math.max(Math.abs(targetState.v4), 1e-6);
-      const closeEnoughV4 = Math.abs(state.v4 - targetState.v4) <= Math.max(absTol, relTol * scaleV4);
+      const closeEnoughV4 =
+        Math.abs(state.v4 - targetState.v4) <=
+        Math.max(absTol, relTol * scaleV4);
       if (closeEnoughV4) {
         break;
       }
@@ -281,7 +307,11 @@ function sampleTransientTrace(derived, initialState, solver, targetState) {
   };
 }
 
-function solvePeriodicSteadyStateIterative(derived, initialState = null, solver = DEFAULT_SOLVER) {
+function solvePeriodicSteadyStateIterative(
+  derived,
+  initialState = null,
+  solver = DEFAULT_SOLVER,
+) {
   let state = initialState
     ? { v3: initialState.v3, v4: initialState.v4 }
     : { v3: 0, v4: 0 };
@@ -299,7 +329,10 @@ function solvePeriodicSteadyStateIterative(derived, initialState = null, solver 
     state = step.state;
     qSensorC = step.qSensorC;
     qTransferC = step.qTransferC;
-    residualV = Math.max(Math.abs(state.v3 - prevV3), Math.abs(state.v4 - prevV4));
+    residualV = Math.max(
+      Math.abs(state.v3 - prevV3),
+      Math.abs(state.v4 - prevV4),
+    );
     iterations = i + 1;
     if (trace) {
       trace.push({
@@ -311,9 +344,25 @@ function solvePeriodicSteadyStateIterative(derived, initialState = null, solver 
     }
 
     if (residualV < solver.tolV) {
-      return { converged: true, iterations, residualV, state, qSensorC, qTransferC, trace };
+      return {
+        converged: true,
+        iterations,
+        residualV,
+        state,
+        qSensorC,
+        qTransferC,
+        trace,
+      };
     }
   }
 
-  return { converged: false, iterations, residualV, state, qSensorC, qTransferC, trace };
+  return {
+    converged: false,
+    iterations,
+    residualV,
+    state,
+    qSensorC,
+    qTransferC,
+    trace,
+  };
 }

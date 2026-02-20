@@ -1,5 +1,5 @@
-import { logSpace } from "./charts.js";
-import { clamp } from "./format.js";
+import { logSpace } from './charts.js';
+import { clamp } from './format.js';
 
 export function buildSolverTraceData(trace) {
   const x = [];
@@ -18,7 +18,7 @@ export function buildSolverResidualData(trace, scale) {
   const y = [];
   for (const t of trace) {
     x.push(t.iteration);
-    if (scale === "log") {
+    if (scale === 'log') {
       y.push(Math.log10(Math.max(Math.abs(t.residualV), 1e-18)));
     } else {
       y.push(Math.max(0, t.residualV));
@@ -27,8 +27,8 @@ export function buildSolverResidualData(trace, scale) {
   return {
     x,
     y,
-    yLabel: scale === "log" ? "log10(Residual V)" : "Residual (V)",
-    lineLabel: scale === "log" ? "log10 residual" : "residual",
+    yLabel: scale === 'log' ? 'log10(Residual V)' : 'Residual (V)',
+    lineLabel: scale === 'log' ? 'log10 residual' : 'residual',
   };
 }
 
@@ -44,7 +44,13 @@ export function sweepFrequency(base, sweep, seedState, simulateWithState) {
   return { x, y };
 }
 
-export function sweepPosition(base, sweep, seedState, simulateWithState, centerTravelFraction) {
+export function sweepPosition(
+  base,
+  sweep,
+  seedState,
+  simulateWithState,
+  centerTravelFraction,
+) {
   const n = sweep.positionPoints;
   const x = [];
   const y = [];
@@ -68,7 +74,8 @@ export function sweepGap(base, sweep, seedState, simulateWithState) {
   const y = [];
   let warmState = seedState ? { ...seedState } : null;
   for (let i = 0; i < n; i++) {
-    const g = sweep.gapMinMm + (i / (n - 1)) * (sweep.gapMaxMm - sweep.gapMinMm);
+    const g =
+      sweep.gapMinMm + (i / (n - 1)) * (sweep.gapMaxMm - sweep.gapMinMm);
     x.push(g);
     const sweepPoint = simulateWithState({ ...base, totalGapMm: g }, warmState);
     y.push(sweepPoint.result.vOutSteadyV);

@@ -1,29 +1,25 @@
-import {
-  DEFAULT_INPUTS,
-  DEFAULT_SOLVER,
-  EPS0,
-} from "./model/defaults.mjs";
-import { solveGeometry } from "./model/geometry.mjs";
+import { DEFAULT_INPUTS, DEFAULT_SOLVER, EPS0 } from './model/defaults.mjs';
+import { solveGeometry } from './model/geometry.mjs';
 import {
   simulateSensorNodeWaveform,
   solveSensorNodeVoltages,
-} from "./model/sensor-network.mjs";
+} from './model/sensor-network.mjs';
 import {
   clamp,
   cycleStep,
   solvePeriodicSteadyState,
-} from "./model/charge-transfer.mjs";
+} from './model/charge-transfer.mjs';
 
 export { DEFAULT_INPUTS, DEFAULT_SOLVER, EPS0 };
 export { clamp, cycleStep, solvePeriodicSteadyState };
 export { simulateSensorNodeWaveform, solveSensorNodeVoltages };
 
 function asRecord(value) {
-  return value && typeof value === "object" ? value : {};
+  return value && typeof value === 'object' ? value : {};
 }
 
 function toFiniteNumber(value, fallback) {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 function toPositiveNumber(value, fallback) {
@@ -37,7 +33,7 @@ function toNonNegativeNumber(value, fallback) {
 }
 
 function toBoolean(value, fallback) {
-  return typeof value === "boolean" ? value : fallback;
+  return typeof value === 'boolean' ? value : fallback;
 }
 
 function toPositiveInteger(value, fallback) {
@@ -48,7 +44,10 @@ function toPositiveInteger(value, fallback) {
 
 function normalizeInputs(input) {
   const raw = { ...DEFAULT_INPUTS, ...asRecord(input) };
-  const totalGapMm = toPositiveNumber(raw.totalGapMm, DEFAULT_INPUTS.totalGapMm);
+  const totalGapMm = toPositiveNumber(
+    raw.totalGapMm,
+    DEFAULT_INPUTS.totalGapMm,
+  );
   const minGapMmRaw = toPositiveNumber(raw.minGapMm, DEFAULT_INPUTS.minGapMm);
   const minGapMm = Math.min(minGapMmRaw, totalGapMm);
 
@@ -57,7 +56,11 @@ function normalizeInputs(input) {
     heightCm: toPositiveNumber(raw.heightCm, DEFAULT_INPUTS.heightCm),
     totalGapMm,
     minGapMm,
-    position: clamp(toFiniteNumber(raw.position, DEFAULT_INPUTS.position), 0, 1),
+    position: clamp(
+      toFiniteNumber(raw.position, DEFAULT_INPUTS.position),
+      0,
+      1,
+    ),
     freqHz: toPositiveNumber(raw.freqHz, DEFAULT_INPUTS.freqHz),
     vDrivePeakV: toFiniteNumber(raw.vDrivePeakV, DEFAULT_INPUTS.vDrivePeakV),
     r10Ohm: toPositiveNumber(raw.r10Ohm, DEFAULT_INPUTS.r10Ohm),
@@ -81,7 +84,10 @@ function normalizeSolver(solver) {
     tolV: toNonNegativeNumber(raw.tolV, DEFAULT_SOLVER.tolV),
     maxIter: toPositiveInteger(raw.maxIter, DEFAULT_SOLVER.maxIter),
     transferGain: toFiniteNumber(raw.transferGain, DEFAULT_SOLVER.transferGain),
-    useOutputClamp: toBoolean(raw.useOutputClamp, DEFAULT_SOLVER.useOutputClamp),
+    useOutputClamp: toBoolean(
+      raw.useOutputClamp,
+      DEFAULT_SOLVER.useOutputClamp,
+    ),
     clampMinV,
     clampMaxV,
     collectTrace: toBoolean(raw.collectTrace, DEFAULT_SOLVER.collectTrace),
@@ -89,12 +95,17 @@ function normalizeSolver(solver) {
 }
 
 function normalizeState(initialState) {
-  if (!initialState || typeof initialState !== "object") return null;
-  if (!Number.isFinite(initialState.v3) || !Number.isFinite(initialState.v4)) return null;
+  if (!initialState || typeof initialState !== 'object') return null;
+  if (!Number.isFinite(initialState.v3) || !Number.isFinite(initialState.v4))
+    return null;
   return { v3: initialState.v3, v4: initialState.v4 };
 }
 
-export function simulateWithState(input, initialState = null, solver = DEFAULT_SOLVER) {
+export function simulateWithState(
+  input,
+  initialState = null,
+  solver = DEFAULT_SOLVER,
+) {
   const inputs = normalizeInputs(input);
   const normalizedSolver = normalizeSolver(solver);
   const normalizedState = normalizeState(initialState);
@@ -102,13 +113,7 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
   const warnings = [];
   const c3F = Math.max(inputs.c3F, 1e-18);
   const c4F = Math.max(inputs.c4F, 1e-18);
-  const {
-    dLeftM,
-    dRightM,
-    caF,
-    cbF,
-    deltaCF,
-  } = solveGeometry(inputs);
+  const { dLeftM, dRightM, caF, cbF, deltaCF } = solveGeometry(inputs);
 
   const omega = 2 * Math.PI * Math.max(inputs.freqHz, 1e-12);
   const { vaNodeV, vbNodeV } = solveSensorNodeVoltages({
@@ -165,23 +170,27 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
   const fWarningThresholdHz = 1 / (10 * Math.max(tauMax, 1e-18));
 
   if (tHalf < 5 * tauMax) {
-    warnings.push("Full-charge assumption may be invalid at this frequency.");
+    warnings.push('Full-charge assumption may be invalid at this frequency.');
   }
 
   if (!steadyState.converged) {
-    warnings.push("Steady-state solver did not converge; result may be approximate.");
+    warnings.push(
+      'Steady-state solver did not converge; result may be approximate.',
+    );
   }
 
   if (normalizedSolver.useOutputClamp) {
-    const nearMin = Math.abs(steadyState.state.v4 - normalizedSolver.clampMinV) < 1e-6;
-    const nearMax = Math.abs(steadyState.state.v4 - normalizedSolver.clampMaxV) < 1e-6;
+    const nearMin =
+      Math.abs(steadyState.state.v4 - normalizedSolver.clampMinV) < 1e-6;
+    const nearMax =
+      Math.abs(steadyState.state.v4 - normalizedSolver.clampMaxV) < 1e-6;
     if (nearMin || nearMax) {
-      warnings.push("Output clamp is active; saturation limits reached.");
+      warnings.push('Output clamp is active; saturation limits reached.');
     }
   }
 
   if (!Number.isFinite(vOutSteadyV)) {
-    warnings.push("Numeric instability detected; check parameter ranges.");
+    warnings.push('Numeric instability detected; check parameter ranges.');
   }
 
   return {

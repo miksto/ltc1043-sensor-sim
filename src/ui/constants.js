@@ -1,4 +1,4 @@
-import { DEFAULT_INPUTS, DEFAULT_SOLVER } from "../simulator-core.mjs";
+import { DEFAULT_INPUTS, DEFAULT_SOLVER } from '../simulator-core.mjs';
 
 export const REF = {
   centeredCapPF: 48.2,
@@ -15,7 +15,7 @@ export const DEFAULTS = {
   totalGapMm: DEFAULT_INPUTS.totalGapMm,
   position: 0.5,
   positionOffsetMm: 0,
-  residualScale: "linear",
+  residualScale: 'linear',
   freqHz: DEFAULT_INPUTS.freqHz,
   vDrivePeakV: DEFAULT_INPUTS.vDrivePeakV,
   r10Ohm: DEFAULT_INPUTS.r10Ohm,
@@ -36,9 +36,29 @@ export const DEFAULTS = {
 };
 
 export const INPUT_IDS = [
-  "widthCm", "heightCm", "totalGapMm", "minGapMm", "position", "positionText", "positionOffsetMm", "freqHz",
-  "plateAreaInfo",
-  "residualScale",
-  "vDrivePeakV", "epsilonR", "r10Ohm", "r11Ohm", "iBiasPA", "c3F", "c4F", "ccF",
-  "freqMinHz", "freqMaxHz", "freqPoints", "gapMinMm", "gapMaxMm", "gapPoints", "positionPoints",
+  'widthCm',
+  'heightCm',
+  'totalGapMm',
+  'minGapMm',
+  'position',
+  'positionText',
+  'positionOffsetMm',
+  'freqHz',
+  'plateAreaInfo',
+  'residualScale',
+  'vDrivePeakV',
+  'epsilonR',
+  'r10Ohm',
+  'r11Ohm',
+  'iBiasPA',
+  'c3F',
+  'c4F',
+  'ccF',
+  'freqMinHz',
+  'freqMaxHz',
+  'freqPoints',
+  'gapMinMm',
+  'gapMaxMm',
+  'gapPoints',
+  'positionPoints',
 ];
