@@ -35,8 +35,7 @@ export function cycleStep(state, derived) {
   const {
     c3F,
     c4F,
-    cSensorEqF,
-    qPacketOpenC,
+    c3SampleV,
     alpha,
     transferGain,
     useClamp,
@@ -44,14 +43,16 @@ export function cycleStep(state, derived) {
     clampMaxV,
   } = derived;
 
-  const qSensorC = qPacketOpenC - cSensorEqF * state.v3;
-  const v3A = state.v3 + qSensorC / c3F;
+  const v3A = c3SampleV;
   const v4A = state.v4;
+  const shareRatio = c3F / Math.max(c3F + c4F, 1e-18);
+  const v3Drive = shareRatio * v3A;
 
   const cEqF = (c3F * c4F) / Math.max(c3F + c4F, 1e-18);
-  const qTransferC = transferGain * cEqF * (v3A - v4A);
-  const v3B = v3A - qTransferC / c3F;
+  const qTransferC = transferGain * cEqF * (v3Drive - v4A);
+  const v3B = v3Drive - qTransferC / c3F;
   let v4B = v4A + qTransferC / c4F;
+  const qSensorC = c3F * v3A;
 
   v4B *= alpha;
 
@@ -113,6 +114,8 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
   const p = { ...DEFAULT_INPUTS, ...input };
 
   const warnings = [];
+  const c3F = Math.max(p.c3F, 1e-18);
+  const c4F = Math.max(p.c4F, 1e-18);
   const areaM2 = (p.widthCm * 1e-2) * (p.heightCm * 1e-2);
   const totalGapM = p.totalGapMm * 1e-3;
   const minGapM = p.minGapMm * 1e-3;
@@ -124,21 +127,27 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
   const cbF = (EPS0 * p.epsilonR * areaM2) / Math.max(dRightM, 1e-15);
   const deltaCF = caF - cbF;
 
-  const qPacketC = 2 * p.vDrivePeakV * deltaCF;
+  const omega = 2 * Math.PI * Math.max(p.freqHz, 1e-12);
+  const caEffF = Math.max(caF + p.ccF, 1e-18);
+  const cbEffF = Math.max(cbF + p.ccF, 1e-18);
+  const vaNodeV = p.vDrivePeakV / (1 + omega * Math.max(p.r10Ohm, 1e-18) * caEffF);
+  const vbNodeV = p.vDrivePeakV / (1 + omega * Math.max(p.r11Ohm, 1e-18) * cbEffF);
+  const deltaVinV = vaNodeV - vbNodeV;
+  // Keep historical output polarity (vOut = -v4) by inverting sampled differential sign.
+  const c3SampleV = -deltaVinV;
+  const qPacketC = c3F * c3SampleV;
 
   const rEqOhm = Math.max(p.rEqOhm, 1e-18);
-  const tauOutS = Math.max(rEqOhm * p.c4F, 1e-18);
+  const tauOutS = Math.max(rEqOhm * c4F, 1e-18);
 
   const T = 1 / Math.max(p.freqHz, 1e-12);
   const alpha = Math.exp(-T / tauOutS);
-  const cSensorEqF = Math.max(caF + cbF + p.ccF, 1e-18);
 
   const solved = solvePeriodicSteadyState(
     {
-      c3F: Math.max(p.c3F, 1e-18),
-      c4F: Math.max(p.c4F, 1e-18),
-      cSensorEqF,
-      qPacketOpenC: qPacketC,
+      c3F,
+      c4F,
+      c3SampleV,
       alpha,
     },
     initialState,
@@ -184,6 +193,9 @@ export function simulateWithState(input, initialState = null, solver = DEFAULT_S
       qPacketC,
       qToC4C,
       vOutSteadyV,
+      vaNodeV,
+      vbNodeV,
+      deltaVinV,
       tauOutS,
       fPoleHz,
       warnings,
